@@ -1,120 +1,123 @@
-import { NestFactory } from '@nestjs/core';
-import { AppModule } from './modules/app/app.module';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { Request } from 'express';
+import { ValidationPipe, VersioningType } from "@nestjs/common";
+import { NestFactory } from "@nestjs/core";
+import type { NestExpressApplication } from "@nestjs/platform-express";
+import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
+import { json, type NextFunction, type Request, type Response } from "express";
+import helmet from "helmet";
+import { AppModule } from "./app.module";
+import { AUTH, type Auth } from "./auth/auth.instance";
+import { AppConfigService } from "./config/app-config.service";
 
-async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+async function bootstrap(): Promise<void> {
+  // Nest's own body parser is disabled: Better Auth must read the raw request
+  // body itself, and a pre-consumed stream would break every auth endpoint.
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    bufferLogs: false,
+    bodyParser: false,
+  });
+  const config = app.get(AppConfigService);
 
-  // Configure CORS with API key support
-  app.enableCors({
-    origin: (
-      origin: string,
-      callback: (error: Error | null, success?: boolean) => void,
-    ) => {
-      // Allow requests with no origin (like mobile apps, Postman, or curl requests)
-      if (!origin) {
-        callback(null, true);
-        return;
-      }
+  // All real traffic arrives via the Next.js proxy (and often a platform LB in
+  // front of that). Without trust proxy, req.ip is the proxy's address and
+  // per-IP rate limiting would throttle every visitor as one client.
+  app.set("trust proxy", true);
 
-      try {
-        const originUrl = new URL(origin);
-
-        // In development, allow localhost and local network
-        if (process.env.NODE_ENV !== 'production') {
-          const devAllowed = [
-            'localhost',
-            '127.0.0.1',
-            '192.168.',
-            '10.',
-            'null',
-          ];
-          if (devAllowed.some((host) => originUrl.hostname.includes(host))) {
-            callback(null, true);
-            return;
-          }
-        }
-
-        // In production, check against allowed origins
-        const allowedOrigins =
-          process.env.ALLOWED_ORIGINS?.split(',')
-            .map((o) => o.trim())
-            .filter(Boolean) || [];
-
-        // Always allow the main domain
-        allowedOrigins.push('vidyoza.com', 'www.vidyoza.com');
-
-        if (
-          allowedOrigins.some((domain) => originUrl.hostname.endsWith(domain))
-        ) {
-          callback(null, true);
-        } else {
-          callback(new Error('Domain not allowed by CORS'), false);
-        }
-      } catch {
-        callback(new Error('Invalid origin'), false);
-      }
-    },
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: [
-      'Content-Type',
-      'Authorization',
-      'X-API-Key',
-      'Accept',
-      'Origin',
-      'X-Requested-With',
-    ],
-    exposedHeaders: [
-      'Content-Disposition',
-      'X-RateLimit-Limit',
-      'X-RateLimit-Remaining',
-      'X-RateLimit-Reset',
-    ],
-    credentials: true,
-    maxAge: 3600, // Cache preflight requests for 1 hour
-    preflightContinue: false,
-    optionsSuccessStatus: 204,
+  // Better Auth owns /api/auth/*; everything else gets JSON parsing as before.
+  const { toNodeHandler } = await import("better-auth/node");
+  const auth = app.get<Auth>(AUTH);
+  const authHandler = toNodeHandler(auth);
+  const jsonParser = json({ limit: "1mb" });
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    if (req.url.startsWith("/api/auth")) return void authHandler(req, res);
+    return jsonParser(req, res, next);
   });
 
-  // Configure Swagger with security
-  const config = new DocumentBuilder()
-    .setTitle('YouTube Downloader API')
-    .setDescription('API for downloading and managing YouTube videos')
-    .setVersion('1.0')
-    .addApiKey(
-      {
-        type: 'apiKey',
-        in: 'header',
-        name: 'X-API-Key',
-        description:
-          'API key for authentication. Can also be provided via Bearer token in Authorization header.',
-      },
-      'X-API-Key',
-    )
-    .addBearerAuth({
-      type: 'http',
-      scheme: 'bearer',
-      bearerFormat: 'API Key',
-      description:
-        'API key as Bearer token. Can also be provided via X-API-Key header.',
-    })
-    .build();
+  app.enableShutdownHooks();
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: { policy: "cross-origin" },
+      contentSecurityPolicy: config.isProduction ? undefined : false,
+    }),
+  );
 
-  const document = SwaggerModule.createDocument(app, config);
+  app.enableVersioning({ type: VersioningType.URI, defaultVersion: "2" });
 
-  // Only enable Swagger UI in development environment
-  if (process.env.NODE_ENV !== 'production') {
-    SwaggerModule.setup('api', app, document, {
-      swaggerOptions: {
-        persistAuthorization: true,
-        tagsSorter: 'alpha',
-        operationsSorter: 'alpha',
-      },
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+      transformOptions: { enableImplicitConversion: true },
+    }),
+  );
+
+  const allowed = config.allowedOrigins;
+  app.enableCors({
+    origin: (
+      origin: string | undefined,
+      callback: (err: Error | null, allow?: boolean) => void,
+    ) => {
+      // Non-browser clients (curl, mobile apps) send no Origin header.
+      if (!origin) return callback(null, true);
+
+      try {
+        const { hostname } = new URL(origin);
+        if (!config.isProduction) {
+          const devHosts = ["localhost", "127.0.0.1"];
+          if (devHosts.includes(hostname) || hostname.startsWith("192.168.")) {
+            return callback(null, true);
+          }
+        }
+        const ok = allowed.some((entry) => {
+          try {
+            const entryHost = entry.includes("://") ? new URL(entry).hostname : entry;
+            return hostname === entryHost || hostname.endsWith(`.${entryHost}`);
+          } catch {
+            return false;
+          }
+        });
+        return ok ? callback(null, true) : callback(new Error("Not allowed by CORS"), false);
+      } catch {
+        return callback(new Error("Invalid origin"), false);
+      }
+    },
+    methods: ["GET", "POST", "DELETE", "OPTIONS"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "X-API-Key",
+      "X-Admin-Token",
+      "X-Request-Id",
+      "Accept",
+      "Range",
+    ],
+    exposedHeaders: ["Content-Disposition", "Content-Range", "X-Request-Id"],
+    credentials: false,
+    maxAge: 3600,
+  });
+
+  if (config.swaggerEnabled) {
+    const swaggerConfig = new DocumentBuilder()
+      .setTitle("Vidyoza API v2")
+      .setDescription(
+        "Robust social media download engine — media info, download jobs with live SSE progress, secure file delivery.",
+      )
+      .setVersion("2.0.0")
+      .addApiKey({ type: "apiKey", in: "header", name: "X-API-Key" }, "api-key")
+      .addApiKey({ type: "apiKey", in: "header", name: "X-Admin-Token" }, "admin-token")
+      .build();
+    const document = SwaggerModule.createDocument(app, swaggerConfig);
+    SwaggerModule.setup("docs", app, document, {
+      swaggerOptions: { persistAuthorization: true, tagsSorter: "alpha" },
     });
   }
 
-  const port = process.env.PORT || 3001;
-  await app.listen(port);
+  await app.listen(config.port);
+  // eslint-disable-next-line no-console
+  console.log(
+    `Vidyoza API v2 listening on http://localhost:${config.port}` +
+      (config.swaggerEnabled ? " (docs at /docs)" : ""),
+  );
 }
-bootstrap();
+
+void bootstrap();

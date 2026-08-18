@@ -1,0 +1,7 @@
+packages:
+  - "packages/*"
+
+allowBuilds:
+  '@prisma/engines': true
+  '@scarf/scarf': false
+  prisma: true

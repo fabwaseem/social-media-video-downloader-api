@@ -1,2 +1,0 @@
--- AlterTable
-ALTER TABLE "ApiKey" ADD COLUMN     "maxDuration" INTEGER NOT NULL DEFAULT 1800;
