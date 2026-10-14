@@ -1,0 +1,60 @@
+services:
+  api:
+    build: .
+    ports:
+      - "3001:3001"
+    environment:
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/downloader
+      # Local opt-out. Unset before this port is reachable beyond your machine.
+      AUTH_DISABLED: "true"
+      NODE_ENV: production
+      # Uncomment with the bgutil profile:
+      # YTDLP_POT_BASE_URL: http://bgutil:4416
+      # Uncomment with the minio profile (create the bucket in the console first):
+      # STORAGE_DRIVER: r2
+      # R2_ENDPOINT: http://minio:9000
+      # R2_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
+      # R2_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
+      # R2_BUCKET: downloads
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: downloader
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d downloader"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  bgutil:
+    profiles: ["bgutil"]
+    image: brainicism/bgutil-ytdlp-pot-provider:latest
+    ports:
+      - "4416:4416"
+
+  minio:
+    profiles: ["minio"]
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio:/data
+
+volumes:
+  pgdata:
+  minio:

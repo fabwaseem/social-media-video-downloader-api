@@ -8,7 +8,9 @@ import {
   contentTypeFor,
   safeJoin,
 } from "../common/utils/filename";
+import { PrismaService } from "../prisma/prisma.service";
 import { StorageService } from "../storage/storage.service";
+import { verifyFileLink } from "./download-link";
 
 export interface FileStreamResult {
   stream: ReadStream;
@@ -34,7 +36,38 @@ export class FilesService {
   constructor(
     private readonly config: AppConfigService,
     private readonly storage: StorageService,
+    private readonly prisma: PrismaService,
   ) {}
+
+  /**
+   * The link is the credential. The signature is checked before the job is
+   * loaded so a guessed id does not reveal whether a download exists.
+   */
+  private async authorizedFile(
+    jobId: string,
+    exp: string | undefined,
+    sig: string | undefined,
+  ): Promise<{ filename: string; key: string }> {
+    if (!verifyFileLink(jobId, exp, sig, this.config.fileLinkSecret)) {
+      throw new ApiException(
+        ErrorCode.FILE_NOT_FOUND,
+        "Invalid or expired download link",
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+    const record = await this.prisma.download.findUnique({ where: { id: jobId } });
+    if (!record?.filename || record.status !== "COMPLETED") {
+      throw new ApiException(
+        ErrorCode.FILE_NOT_FOUND,
+        "File not found or expired",
+        HttpStatus.NOT_FOUND,
+      );
+    }
+    if (record.expiresAt && record.expiresAt.getTime() < Date.now()) {
+      throw new ApiException(ErrorCode.FILE_EXPIRED, "File not found or expired", HttpStatus.GONE);
+    }
+    return { filename: record.filename, key: record.storageKey ?? record.filename };
+  }
 
   /**
    * Rejects anything that is not a bare media filename.
@@ -70,17 +103,17 @@ export class FilesService {
     }
   }
 
-  async getMetadata(filename: string) {
-    const decoded = decodeURIComponent(filename);
-    this.assertMediaKey(decoded);
+  async getMetadata(jobId: string, exp?: string, sig?: string) {
+    const { filename, key } = await this.authorizedFile(jobId, exp, sig);
+    this.assertMediaKey(key);
 
     if (this.storage.remote) {
-      const head = await this.storage.head(decoded);
+      const head = await this.storage.head(key);
       if (head) {
         return {
-          filename: decoded,
+          filename,
           size: head.size,
-          contentType: head.contentType ?? contentTypeFor(decoded),
+          contentType: head.contentType ?? contentTypeFor(filename),
           createdAt: null,
           modifiedAt: null,
         };
@@ -90,7 +123,7 @@ export class FilesService {
     const { path, size } = await this.resolve(filename);
     const stat = await fs.stat(path);
     return {
-      filename: decoded,
+      filename,
       size,
       contentType: contentTypeFor(filename),
       createdAt: stat.birthtime,
@@ -98,22 +131,22 @@ export class FilesService {
     };
   }
 
-  async stream(filename: string, range?: string): Promise<FileResponse> {
-    const decoded = decodeURIComponent(filename);
-    this.assertMediaKey(decoded);
+  async stream(jobId: string, exp: string | undefined, sig: string | undefined, range?: string): Promise<FileResponse> {
+    const { filename, key } = await this.authorizedFile(jobId, exp, sig);
+    this.assertMediaKey(key);
 
     // Remote first, but fall through to disk when the object is missing: a job
     // that finished just before the switch to bucket storage — or one whose
     // upload failed and kept its local copy — still has to be downloadable.
-    if (this.storage.remote && (await this.storage.head(decoded))) {
-      return { kind: "redirect", url: await this.storage.signedUrl(decoded, decoded) };
+    if (this.storage.remote && (await this.storage.head(key))) {
+      return { kind: "redirect", url: await this.storage.signedUrl(key, filename) };
     }
 
     const { path, size } = await this.resolve(filename);
 
     const common = {
-      "Content-Type": contentTypeFor(decoded),
-      "Content-Disposition": contentDisposition(decoded),
+      "Content-Type": contentTypeFor(filename),
+      "Content-Disposition": contentDisposition(filename),
       "Accept-Ranges": "bytes",
       "Cache-Control": "private, max-age=0",
       "X-Content-Type-Options": "nosniff",

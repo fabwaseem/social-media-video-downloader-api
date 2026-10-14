@@ -19,6 +19,17 @@ export const envSchema = z.object({
    * this secret nor a valid API key are rejected in production.
    */
   FRONTEND_SECRET: z.string().optional().default(""),
+  /**
+   * Explicit opt-out of API authentication. Requests without an API key or the
+   * frontend secret are allowed only when this is true. NODE_ENV is not
+   * consulted — development and test stay locked unless the flag is set.
+   */
+  AUTH_DISABLED: booleanish("false"),
+  /**
+   * HMAC secret for finished-file links. Empty falls back to BETTER_AUTH_SECRET,
+   * then a hash of DATABASE_URL, so links stay unguessable without a new secret.
+   */
+  FILE_LINK_SECRET: z.string().optional().default(""),
   ADMIN_TOKEN: z.string().optional().default(""),
   /** Signing secret for Better Auth sessions/tokens. Required in production. */
   BETTER_AUTH_SECRET: z.string().optional().default(""),
@@ -76,6 +87,15 @@ export const envSchema = z.object({
   COOKIES_B64: z.string().optional().default(""),
   /** Explicit binary overrides; skip auto-detection entirely when set. */
   YTDLP_PATH: z.string().optional().default(""),
+  /**
+   * yt-dlp release to download when no binary is installed (YYYY.MM.DD).
+   * Empty uses the version pinned in BinariesService.
+   */
+  YTDLP_VERSION: z.string().optional().default(""),
+  /** Wall-clock limit for a provider direct download, in milliseconds. */
+  DIRECT_DOWNLOAD_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(3_600_000).default(300_000),
+  /** Hard cap on bytes read from a provider direct download. Default 2 GiB. */
+  DIRECT_DOWNLOAD_MAX_BYTES: z.coerce.number().int().positive().default(2 * 1024 ** 3),
   FFMPEG_PATH: z.string().optional().default(""),
   /** Forwarded to yt-dlp as --proxy (helps with datacenter-IP blocks). */
   YTDLP_PROXY: z.string().optional().default(""),

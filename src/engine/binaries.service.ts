@@ -2,19 +2,34 @@ import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
 import { execFile } from "child_process";
 import extract from "extract-zip";
-import { https } from "follow-redirects";
+import { createWriteStream } from "fs";
 import * as fsSync from "fs";
 import * as fs from "fs/promises";
 import * as os from "os";
 import * as path from "path";
+import { pipeline } from "stream/promises";
 import { promisify } from "util";
 import { createHash } from "crypto";
 import { AppConfigService } from "../config/app-config.service";
+import { safeFetch } from "../common/http/safe-fetch";
 import { StorageService } from "../storage/storage.service";
 
 const execFileAsync = promisify(execFile);
 
-const RELEASE_BASE = "https://github.com/yt-dlp/yt-dlp/releases/latest/download";
+/**
+ * Release downloaded when no yt-dlp binary is already installed.
+ * Override with YTDLP_VERSION. Checksums are for this pin only.
+ */
+export const PINNED_YTDLP_VERSION = "2026.08.19";
+
+const PINNED_SHA256: Record<string, string> = {
+  "2026.08.19/yt-dlp": "1fa6733c37ea6fb51c99ad8fe785e7b7e5f3246c9b980230329d4fb72ed8d4d6",
+  "2026.08.19/yt-dlp.exe": "66674953fe251b89f4d08c5f0e35e0728679bd67ab3d7d05c0562af101dd3e7a",
+  "2026.08.19/yt-dlp_linux": "58162f9bfdc27458ea47bfcb311cf47028f17d8154a8bf7d689861d46399230a",
+  "2026.08.19/yt-dlp_linux_aarch64": "b16e4dab368a816cd05d477d698a605a6ae87ccee1c8ffd38fa21d7254141fcc",
+  "2026.08.19/yt-dlp_macos": "0f192b7ec147ab6288885d6351d9ab67367640029b4377576ef46dd79cf7b202",
+  "2026.08.19/yt-dlp_x86.exe": "a8f91bd41452506bc81ebd2f369b186fea0ee7075413ba00cef9fd346a0a5d0c",
+};
 
 /**
  * Where the cookie jar lives in the bucket.
@@ -227,7 +242,7 @@ export class BinariesService implements OnModuleInit {
     }
     if (inv.source === "managed-zipimport") {
       // Re-download the latest zipimport build in place.
-      await this.downloadFile(`${RELEASE_BASE}/yt-dlp`, inv.argsPrefix[0]);
+      await this.downloadAsset("yt-dlp", inv.argsPrefix[0]);
       return "re-downloaded latest zipimport build";
     }
     return "system-managed installation — update it through your package manager";
@@ -366,12 +381,12 @@ export class BinariesService implements OnModuleInit {
       return { command: this.pythonCmd, argsPrefix: ["-m", "yt_dlp"], source: "python-module" };
     }
 
-    // 5. Download the standalone binary for this OS/arch.
-    const url = this.standaloneUrl();
-    if (url) {
+    // 5. Download the pinned standalone binary for this OS/arch.
+    const asset = this.standaloneAsset();
+    if (asset) {
       try {
-        this.logger.log(`Downloading yt-dlp standalone from ${url}…`);
-        await this.downloadFile(url, managed);
+        this.logger.log(`Downloading yt-dlp ${this.ytdlpVersion()} (${asset})…`);
+        await this.downloadAsset(asset, managed);
         if (os.platform() !== "win32") await fs.chmod(managed, 0o755);
         if (await this.verify(managed, [])) {
           return { command: managed, argsPrefix: [], source: "managed-binary" };
@@ -387,8 +402,8 @@ export class BinariesService implements OnModuleInit {
     if (this.pythonCmd) {
       const zipimport = path.join(binDir, "yt-dlp-zipimport");
       try {
-        this.logger.log("Downloading yt-dlp zipimport build…");
-        await this.downloadFile(`${RELEASE_BASE}/yt-dlp`, zipimport);
+        this.logger.log(`Downloading yt-dlp ${this.ytdlpVersion()} zipimport build…`);
+        await this.downloadAsset("yt-dlp", zipimport);
         if (await this.verify(this.pythonCmd, [zipimport])) {
           return {
             command: this.pythonCmd,
@@ -411,18 +426,28 @@ export class BinariesService implements OnModuleInit {
     );
   }
 
-  private standaloneUrl(): string | null {
+  private ytdlpVersion(): string {
+    return this.config.ytdlpVersion || PINNED_YTDLP_VERSION;
+  }
+
+  private assetUrl(name: string): string {
+    return `https://github.com/yt-dlp/yt-dlp/releases/download/${this.ytdlpVersion()}/${name}`;
+  }
+
+  private standaloneAsset(): string | null {
     const platform = os.platform();
     const arch = os.arch();
-    if (platform === "win32") {
-      return arch === "x64" ? `${RELEASE_BASE}/yt-dlp.exe` : `${RELEASE_BASE}/yt-dlp_x86.exe`;
-    }
-    if (platform === "darwin") return `${RELEASE_BASE}/yt-dlp_macos`;
+    if (platform === "win32") return arch === "x64" ? "yt-dlp.exe" : "yt-dlp_x86.exe";
+    if (platform === "darwin") return "yt-dlp_macos";
     if (platform === "linux") {
-      if (arch === "x64") return `${RELEASE_BASE}/yt-dlp_linux`;
-      if (arch === "arm64") return `${RELEASE_BASE}/yt-dlp_linux_aarch64`;
+      if (arch === "x64") return "yt-dlp_linux";
+      if (arch === "arm64") return "yt-dlp_linux_aarch64";
     }
     return null;
+  }
+
+  private async downloadAsset(name: string, savePath: string): Promise<void> {
+    await this.downloadFile(this.assetUrl(name), savePath, PINNED_SHA256[`${this.ytdlpVersion()}/${name}`]);
   }
 
   private async resolveFfmpeg(binDir: string): Promise<void> {
@@ -567,41 +592,26 @@ export class BinariesService implements OnModuleInit {
     }
   }
 
-  private downloadFile(fileUrl: string, savePath: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const file = fsSync.createWriteStream(savePath);
-      const cleanup = () => fsSync.existsSync(savePath) && fsSync.unlinkSync(savePath);
-
-      const req = https.get(fileUrl, (res) => {
-        if (res.statusCode !== 200) {
-          file.close();
-          cleanup();
-          reject(new Error(`Download failed with status ${res.statusCode}`));
-          return;
-        }
-        res.pipe(file);
-        res.on("error", (err) => {
-          file.close();
-          cleanup();
-          reject(err);
-        });
-        file.on("finish", () => {
-          file.close();
-          resolve();
-        });
-        file.on("error", (err) => {
-          cleanup();
-          reject(err);
-        });
-      });
-      req.setTimeout(120_000, () => {
-        req.destroy(new Error("Download timed out"));
-      });
-      req.on("error", (err) => {
-        file.close();
-        cleanup();
-        reject(err);
-      });
-    });
+  private async downloadFile(fileUrl: string, savePath: string, sha256?: string): Promise<void> {
+    const cleanup = () => {
+      if (fsSync.existsSync(savePath)) fsSync.unlinkSync(savePath);
+    };
+    const response = await safeFetch(fileUrl, { timeoutMs: 120_000, maxBytes: 400 * 1024 * 1024 });
+    if (response.status !== 200) {
+      response.body.resume();
+      throw new Error(`Download failed with status ${response.status}`);
+    }
+    try {
+      await pipeline(response.body, createWriteStream(savePath));
+    } catch (error) {
+      cleanup();
+      throw error;
+    }
+    if (!sha256) return;
+    const actual = createHash("sha256").update(await fs.readFile(savePath)).digest("hex");
+    if (actual !== sha256) {
+      cleanup();
+      throw new Error(`Checksum mismatch for ${fileUrl}`);
+    }
   }
 }

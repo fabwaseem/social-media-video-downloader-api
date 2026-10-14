@@ -1,0 +1,10 @@
+node_modules
+dist
+src/generated
+packages/shared/dist
+.git
+downloads
+bin
+coverage
+.env
+*.log
