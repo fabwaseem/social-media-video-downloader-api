@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { createHash } from "crypto";
 import { join } from "path";
 import type { Env } from "./env.validation";
 
@@ -30,6 +31,36 @@ export class AppConfigService {
 
   get frontendSecret(): string {
     return this.config.get("FRONTEND_SECRET", { infer: true });
+  }
+
+  /** True only when AUTH_DISABLED is set. Never inferred from NODE_ENV. */
+  get authDisabled(): boolean {
+    return this.config.get("AUTH_DISABLED", { infer: true });
+  }
+
+  /**
+   * Secret for per-job file links. An explicit FILE_LINK_SECRET wins, then the
+   * Better Auth secret, then a stable hash of the database URL.
+   */
+  get fileLinkSecret(): string {
+    const explicit = this.config.get("FILE_LINK_SECRET", { infer: true });
+    if (explicit) return explicit;
+    if (this.betterAuthSecret) return this.betterAuthSecret;
+    return createHash("sha256")
+      .update(`file-link:${process.env.DATABASE_URL ?? ""}`)
+      .digest("hex");
+  }
+
+  get directDownloadTimeoutMs(): number {
+    return this.config.get("DIRECT_DOWNLOAD_TIMEOUT_MS", { infer: true });
+  }
+
+  get directDownloadMaxBytes(): number {
+    return this.config.get("DIRECT_DOWNLOAD_MAX_BYTES", { infer: true });
+  }
+
+  get ytdlpVersion(): string {
+    return this.config.get("YTDLP_VERSION", { infer: true }).trim();
   }
 
   get adminToken(): string {

@@ -17,7 +17,8 @@ export type AuthedRequest = Request & { apiKey?: ValidatedKey };
  *     injects this header on every proxied /api request; browsers never see it,
  *     so unlike Origin it cannot be spoofed by third-party clients.
  *  3. The route is marked @Public (health, admin — the latter has its own guard).
- *  4. We're not in production (local dev needs zero configuration).
+ *  4. AUTH_DISABLED is explicitly set. NODE_ENV is not an opt-out: a
+ *     development or test process stays locked unless that flag is true.
  *  5. Production without FRONTEND_SECRET configured: fall back to matching
  *     Origin/Referer against ALLOWED_ORIGINS so a half-configured deploy
  *     degrades to CORS-grade protection instead of locking everyone out.
@@ -75,11 +76,11 @@ export class ApiKeyGuard implements CanActivate {
       return true;
     }
 
-    // 3. Local development stays friction-free.
-    if (!this.config.isProduction) return true;
+    // 3. Explicit opt-out. Never implied by NODE_ENV.
+    if (this.config.authDisabled) return true;
 
-    // 4. Origin-allowlist fallback when no secret is configured.
-    if (!secret) {
+    // 4. Origin-allowlist fallback when production has no proxy secret.
+    if (this.config.isProduction && !secret) {
       if (!this.warnedMissingSecret) {
         this.warnedMissingSecret = true;
         this.logger.warn(

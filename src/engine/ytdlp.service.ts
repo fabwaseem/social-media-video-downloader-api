@@ -23,6 +23,7 @@ import { ChildProcess, execFile, spawn } from "child_process";
 import * as fsSync from "fs";
 import { promisify } from "util";
 import { AppConfigService } from "../config/app-config.service";
+import { resolveSourceUrl, SsrfError } from "../common/http/safe-fetch";
 import { DETACH_CHILDREN } from "../common/utils/kill-tree";
 import { BinariesService } from "./binaries.service";
 import {
@@ -33,6 +34,7 @@ import {
 } from "./progress";
 import {
   Attempt,
+  DESKTOP_UA,
   briefError,
   buildAttempts,
   isKnownTransient,
@@ -138,7 +140,7 @@ function bestThumbnail(thumbs: RawThumb[] | undefined): string | null {
  */
 const UNAVAILABLE_TITLE = /^\[(private|deleted|unavailable)\s+video\]$/i;
 
-function normalizeEntry(entry: RawEntry, parent: RawCollection): CollectionEntry {
+function normalizeEntry(entry: RawEntry): CollectionEntry {
   const id = entry.id ?? "";
   const title = entry.title?.trim() || "Untitled";
   const live = entry.live_status;
@@ -294,17 +296,30 @@ export class YtdlpService {
    * …); the base args, the per-attempt variations and the URL are composed here,
    * because the URL is part of what an attempt varies.
    */
+  /**
+   * Expands short links and refuses private redirect targets before yt-dlp
+   * is allowed to fetch the URL itself.
+   */
+  private async publicSourceUrl(url: string): Promise<string> {
+    try {
+      return await resolveSourceUrl(url, {
+        headers: { "User-Agent": DESKTOP_UA },
+        timeoutMs: 20_000,
+      });
+    } catch (error) {
+      if (error instanceof SsrfError) throw new Error("This URL is not allowed.");
+      throw error;
+    }
+  }
+
   private async run(
     opArgs: string[],
     opts: { url: string; playlist?: boolean; timeoutMs?: number },
   ): Promise<string> {
     await this.binaries.ensureReady();
+    const url = await this.publicSourceUrl(opts.url);
 
-    const attempts = buildAttempts(
-      opts.url,
-      detectPlatform(opts.url),
-      this.config.ytdlpMaxAttempts,
-    );
+    const attempts = buildAttempts(url, detectPlatform(url), this.config.ytdlpMaxAttempts);
     const timeout = opts.timeoutMs ?? 60_000;
     let lastError = "";
 
@@ -316,6 +331,7 @@ export class YtdlpService {
           ...this.baseArgs({ playlist: opts.playlist }),
           ...this.attemptArgs(attempt),
           ...opArgs,
+          "--",
           attempt.url,
         ];
         const { stdout } = await execFileAsync(inv.command, [...inv.argsPrefix, ...args], {
@@ -325,7 +341,7 @@ export class YtdlpService {
         });
         if (i > 0) {
           this.logger.log(
-            `Recovered on attempt ${i + 1}/${attempts.length} via "${attempt.label}": ${opts.url}`,
+            `Recovered on attempt ${i + 1}/${attempts.length} via "${attempt.label}": ${url}`,
           );
         }
         return stdout;
@@ -408,7 +424,7 @@ ${lastError.slice(-6000)}`);
       offset,
       limit,
       hasMore,
-      entries: page.map((e) => normalizeEntry(e, raw)),
+      entries: page.map((e) => normalizeEntry(e)),
     };
   }
 
@@ -465,12 +481,9 @@ ${lastError.slice(-6000)}`);
    */
   async runDownload(input: RunDownloadInput): Promise<void> {
     await this.binaries.ensureReady();
+    const url = await this.publicSourceUrl(input.url);
 
-    const attempts = buildAttempts(
-      input.url,
-      detectPlatform(input.url),
-      this.config.ytdlpMaxAttempts,
-    );
+    const attempts = buildAttempts(url, detectPlatform(url), this.config.ytdlpMaxAttempts);
     let lastError = "";
 
     for (let i = 0; i < attempts.length; i++) {
@@ -482,7 +495,7 @@ ${lastError.slice(-6000)}`);
         await done;
         if (i > 0) {
           this.logger.log(
-            `Download recovered on attempt ${i + 1}/${attempts.length} via "${attempt.label}": ${input.url}`,
+            `Download recovered on attempt ${i + 1}/${attempts.length} via "${attempt.label}": ${url}`,
           );
         }
         return;
@@ -619,7 +632,8 @@ ${lastError.slice(-6000)}`);
       args.push("--download-sections", `*${start}-${end}`, "--force-keyframes-at-cuts");
     }
 
-    args.push(attempt.url);
+    // `--` keeps a URL that starts with `-` from being read as a flag.
+    args.push("--", attempt.url);
     return args;
   }
 

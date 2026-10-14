@@ -2,6 +2,7 @@
 /dist
 **/node_modules
 /build
+*.tsbuildinfo
 
 # Logs
 logs
@@ -56,3 +57,10 @@ pids
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 /downloads
+
+# Generated at build time (prisma generate, shared tsc). Do not commit.
+/src/generated
+/packages/shared/dist
+
+# Pinned yt-dlp is downloaded at image build or process startup.
+/bin

@@ -7,6 +7,7 @@ import { join } from "path";
 import { AppConfigService } from "../config/app-config.service";
 import { ApiException, ErrorCode } from "../common/errors";
 import { contentTypeFor, sanitizeFilename } from "../common/utils/filename";
+import { fileLinkPath } from "../files/download-link";
 import { ExtractionService } from "../engine/extraction.service";
 import { CancelledError } from "../engine/ytdlp.service";
 import { PrismaService } from "../prisma/prisma.service";
@@ -508,7 +509,7 @@ export class DownloadsService {
       filename: record.filename,
       fileUrl:
         record.status === "COMPLETED" && record.filename
-          ? `/v2/files/${encodeURIComponent(record.filename)}`
+          ? fileLinkPath(record.id, this.config.fileLinkSecret, this.config.signedUrlTtlSeconds)
           : null,
       fileSizeBytes: record.fileSizeBytes != null ? Number(record.fileSizeBytes) : null,
       error: record.error,
