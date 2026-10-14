@@ -8,7 +8,9 @@ const PAGE = `<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Snagbox</title>
-<link rel="icon" href="/assets/brand/favicon-32.png" type="image/png">
+<link rel="icon" href="/assets/brand/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="icon" href="/assets/brand/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/assets/brand/icon-512.png">
 <link rel="stylesheet" href="/playground.css">
 </head>
 <body>
@@ -68,12 +70,13 @@ main { max-width: 40rem; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
 h1 { font-size: 1.6rem; letter-spacing: -0.03em; margin: 0 0 0.4rem; }
 label { display: block; margin: 0.85rem 0 0.35rem; font-size: 0.85rem; font-weight: 650; }
 input, select, button { font: inherit; width: 100%; padding: 0.65rem 0.75rem; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: inherit; }
+input:focus, select:focus { outline: 2px solid var(--ember-2); outline-offset: 1px; }
 button { margin-top: 1rem; cursor: pointer; background: linear-gradient(135deg, var(--ember), var(--ember-2)); color: #fff; border: 0; font-weight: 700; }
 progress { width: 100%; height: 0.8rem; margin-top: 1rem; accent-color: var(--ember-2); }
 #log { white-space: pre-wrap; }
 a { color: var(--signal); font-weight: 700; }
 @media (prefers-color-scheme: dark) {
-  :root { --paper: #111827; --ink: #f9fafb; --card: #1f2937; --line: #374151; --mist: #9ca3af; }
+  :root { --paper: #0b0b10; --ink: #f9fafb; --card: #16161e; --line: #2c2c36; --mist: #9ca3af; }
 }
 @media (max-width: 640px) {
   .top { flex-direction: column; align-items: flex-start; }
