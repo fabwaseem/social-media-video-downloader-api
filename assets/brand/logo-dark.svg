@@ -1,6 +1,21 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 128" width="520" height="128"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FF5E3A"/><stop offset="1" stop-color="#FF2D87"/></linearGradient></defs>
-<g><rect width="128" height="128" rx="30" fill="url(#g)"/>
-<path d="M26 70 H46 Q50 70 51 74 L53 80 Q54 84 58 84 H70 Q74 84 75 80 L77 74 Q78 70 82 70 H102 V92 Q102 104 90 104 H38 Q26 104 26 92 Z" fill="#fff"/>
-<path d="M64 22 V62 M48 46 L64 62 L80 46" fill="none" stroke="#fff" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/></g>
-<text x="150" y="88" font-family="Inter, 'Segoe UI', system-ui, -apple-system, sans-serif" font-size="68" font-weight="800" letter-spacing="-2" fill="#F9FAFB">snag<tspan fill="url(#g)">box</tspan></text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 128" width="520" height="128">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FF5E3A"/>
+      <stop offset="1" stop-color="#FF2D87"/>
+    </linearGradient>
+  </defs>
+  <g>
+    <rect width="128" height="128" rx="30" fill="url(#g)"/>
+  <!-- box -->
+  <path d="M30 62 L64 76 L98 62 L98 92 Q98 96 94 97.7 L66 109 Q64 110 62 109 L34 97.7 Q30 96 30 92 Z" fill="#fff"/>
+  <path d="M30 62 L64 76 L98 62" fill="none" stroke="#FF3D6E" stroke-width="0"/>
+  <path d="M64 76 L64 110" stroke="#FFD3DF" stroke-width="3"/>
+  <!-- flaps -->
+  <path d="M30 62 L20 50 L50 40 L64 52 Z" fill="#FFE1E8"/>
+  <path d="M98 62 L108 50 L78 40 L64 52 Z" fill="#FFE1E8"/>
+  <!-- play triangle dropping in -->
+  <path d="M54 16 L80 31 Q83 33 80 35 L54 50 Q50 52 50 48 L50 18 Q50 14 54 16 Z" fill="#fff"/>
+  </g>
+  <text x="150" y="88" font-family="Inter, 'Segoe UI', system-ui, -apple-system, sans-serif" font-size="68" font-weight="800" letter-spacing="-2" fill="#F9FAFB">snag<tspan fill="url(#g)">box</tspan></text>
 </svg>

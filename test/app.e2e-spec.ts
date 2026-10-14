@@ -67,6 +67,7 @@ describe("Health (e2e)", () => {
         expect(res.text).toContain("/assets/brand/logo-light.svg");
         expect(res.text).toContain("/assets/brand/logo-dark.svg");
         expect(res.text).toContain("/assets/brand/favicon-32.png");
+        expect(res.text).toContain("/assets/brand/icon.svg");
       });
   });
 });
