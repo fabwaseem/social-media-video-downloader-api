@@ -2,9 +2,10 @@ import { Injectable, Logger } from "@nestjs/common";
 import { execFile } from "child_process";
 import { createWriteStream } from "fs";
 import * as fs from "fs/promises";
-import { Readable } from "stream";
 import { pipeline } from "stream/promises";
 import { promisify } from "util";
+import { AppConfigService } from "../config/app-config.service";
+import { SsrfError, safeFetch } from "../common/http/safe-fetch";
 import { CancelledError } from "./ytdlp.service";
 import { BinariesService } from "./binaries.service";
 import type { EngineProgress } from "./progress";
@@ -24,7 +25,10 @@ const execFileAsync = promisify(execFile);
 export class DirectDownloadService {
   private readonly logger = new Logger(DirectDownloadService.name);
 
-  constructor(private readonly binaries: BinariesService) {}
+  constructor(
+    private readonly binaries: BinariesService,
+    private readonly config: AppConfigService,
+  ) {}
 
   /**
    * Fetches `url` to `outputPath`, reporting progress as bytes arrive.
@@ -38,20 +42,32 @@ export class DirectDownloadService {
     isCancelled?: () => boolean;
   }): Promise<void> {
     const controller = new AbortController();
-    const response = await fetch(input.url, {
-      headers: input.headers ?? {},
-      signal: controller.signal,
-    });
-    if (!response.ok || !response.body) {
+    let response;
+    try {
+      response = await safeFetch(input.url, {
+        headers: input.headers ?? {},
+        signal: controller.signal,
+        timeoutMs: this.config.directDownloadTimeoutMs,
+        maxBytes: this.config.directDownloadMaxBytes,
+      });
+    } catch (error) {
+      if (error instanceof SsrfError) {
+        throw new Error("The media host address is not allowed.");
+      }
+      throw error;
+    }
+    if (response.status < 200 || response.status >= 300) {
+      response.body.resume();
       throw new Error(`Media host returned HTTP ${response.status}`);
     }
 
-    const totalBytes = Number(response.headers.get("content-length")) || 0;
+    const lengthHeader = response.headers["content-length"];
+    const totalBytes = Number(Array.isArray(lengthHeader) ? lengthHeader[0] : lengthHeader) || 0;
     let downloadedBytes = 0;
     let lastEmit = 0;
     const startedAt = Date.now();
 
-    const source = Readable.fromWeb(response.body as Parameters<typeof Readable.fromWeb>[0]);
+    const source = response.body;
     source.on("data", (chunk: Buffer) => {
       downloadedBytes += chunk.length;
       if (input.isCancelled?.()) {

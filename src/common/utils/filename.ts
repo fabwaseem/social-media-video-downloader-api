@@ -23,7 +23,7 @@ export function sanitizeFilename(name: string, maxLength = 120): string {
 export function safeJoin(baseDir: string, filename: string): string | null {
   // Only accept bare filenames — no directories at all.
   if (filename !== basename(filename)) return null;
-  if (filename.includes("..")) return null;
+  if (filename.includes("..") || filename.includes("\0")) return null;
   const base = resolve(baseDir);
   const target = normalize(join(base, filename));
   if (target !== base && !target.startsWith(base + sep)) return null;

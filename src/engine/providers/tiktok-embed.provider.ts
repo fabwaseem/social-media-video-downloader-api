@@ -1,5 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 import type { Platform } from "@vidyoza/shared";
+import { resolveSourceUrl, safeFetch, SsrfError } from "../../common/http/safe-fetch";
 import { DESKTOP_UA } from "../resilience";
 import type { MediaProvider, ProviderMedia } from "./types";
 
@@ -70,20 +71,34 @@ export class TikTokEmbedProvider implements MediaProvider {
   /** Short links only reveal the id through their redirect. */
   private async resolveShortLink(url: string): Promise<string | null> {
     if (!this.isShortLink(url)) return null;
-    const response = await fetch(url, {
-      redirect: "follow",
-      headers: { "User-Agent": DESKTOP_UA },
-      signal: AbortSignal.timeout(20_000),
-    });
-    return this.videoId(response.url);
+    try {
+      const finalUrl = await resolveSourceUrl(url, {
+        headers: { "User-Agent": DESKTOP_UA },
+        timeoutMs: 20_000,
+      });
+      return this.videoId(finalUrl);
+    } catch (error) {
+      if (error instanceof SsrfError) throw new Error("This URL is not allowed.");
+      throw error;
+    }
   }
 
   private async fetchText(url: string): Promise<string> {
-    const response = await fetch(url, {
-      headers: { "User-Agent": DESKTOP_UA, "Accept-Language": "en-US,en;q=0.9" },
-      signal: AbortSignal.timeout(30_000),
-    });
-    if (!response.ok) throw new Error(`Embed endpoint returned HTTP ${response.status}`);
+    let response;
+    try {
+      response = await safeFetch(url, {
+        headers: { "User-Agent": DESKTOP_UA, "Accept-Language": "en-US,en;q=0.9" },
+        timeoutMs: 30_000,
+        maxBytes: 5 * 1024 * 1024,
+      });
+    } catch (error) {
+      if (error instanceof SsrfError) throw new Error("This URL is not allowed.");
+      throw error;
+    }
+    if (response.status < 200 || response.status >= 300) {
+      response.body.resume();
+      throw new Error(`Embed endpoint returned HTTP ${response.status}`);
+    }
     return response.text();
   }
 
