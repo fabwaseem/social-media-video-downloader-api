@@ -12,7 +12,7 @@ services:
       AUTH_DISABLED: "true"
       NODE_ENV: production
       # Production boot refuses an empty signing secret. Compose reads .env.
-      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Set BETTER_AUTH_SECRET in .env before docker compose up (openssl rand -hex 32). See .env.example.}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Set BETTER_AUTH_SECRET in .env before docker compose up (openssl rand -base64 32). See .env.example.}
       # Uncomment with the bgutil profile:
       # YTDLP_POT_BASE_URL: http://bgutil:4416
       # Uncomment with the minio profile (create the bucket in the console first):

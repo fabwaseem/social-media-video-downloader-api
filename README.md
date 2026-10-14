@@ -98,8 +98,13 @@ About a minute, with Postgres and Redis in Compose. Node 22 and pnpm are only ne
 git clone https://github.com/fabwaseem/snagbox.git
 cd snagbox
 cp .env.example .env
-sed -i "s/^BETTER_AUTH_SECRET=.*/BETTER_AUTH_SECRET=$(openssl rand -hex 32)/" .env
-docker compose up --build
+openssl rand -base64 32
+```
+
+Paste that value into `.env` as `BETTER_AUTH_SECRET`. Compose reads `.env` and refuses to start while the secret is empty. For local testing, set `AUTH_DISABLED=true` in `.env` (the Compose file also sets `AUTH_DISABLED=true` on the API service, so a local trial needs no API key). Turn `AUTH_DISABLED` off before the port is reachable by anyone else.
+
+```bash
+docker compose up
 ```
 
 - API: `http://localhost:3001`
@@ -108,7 +113,7 @@ docker compose up --build
 - OpenAPI: `http://localhost:3001/openapi.json`
 - Metrics: `http://localhost:3001/metrics`
 
-Compose sets `AUTH_DISABLED=true` for a local trial. Unset it before the port is reachable by anyone else. Migrations run on startup.
+Migrations run on startup.
 
 Image tags from a `v2.0.0` release: `ghcr.io/fabwaseem/snagbox:2.0.0` and `ghcr.io/fabwaseem/snagbox:latest`.
 
@@ -206,7 +211,7 @@ Auth providers (`GOOGLE_*`, `GITHUB_*`), SMTP, cookies, proxies, and yt-dlp tuni
 
 ## Self-hosting
 
-**Docker.** The image is multi-stage. The runtime installs ffmpeg and a pinned yt-dlp binary, and uses Node 22 as the JavaScript runtime YouTube needs. `docker compose up --build` starts the API, Postgres, and Redis. Optional profiles:
+**Docker.** The image is multi-stage. The runtime installs ffmpeg and a pinned yt-dlp binary, and uses Node 22 as the JavaScript runtime YouTube needs. Copy `.env.example` to `.env`, set `BETTER_AUTH_SECRET` (`openssl rand -base64 32`), and set `AUTH_DISABLED=true` for local testing, then `docker compose up` starts the API, Postgres, and Redis. Optional profiles:
 
 ```bash
 docker compose --profile bgutil up --build
