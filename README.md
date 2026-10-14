@@ -178,7 +178,7 @@ flowchart LR
   worker --> db[(Postgres)]
   worker --> files[Signed file link]
   worker --> hook[HMAC webhook]
-  api --> metrics[/metrics]
+  api --> metrics["/metrics"]
 ```
 
 ## Configuration
