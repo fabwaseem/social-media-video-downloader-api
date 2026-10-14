@@ -26,7 +26,7 @@ pnpm test
 - Keep changes focused.
 - `pnpm lint`, `pnpm typecheck`, and `pnpm test` should pass.
 - Do not commit secrets, cookie jars, or generated Prisma output.
-- Prefer short commit subjects. Releases are cut by release-please from conventional titles (`feat:`, `fix:`) when you want a changelog entry.
+- Prefer short commit subjects. Releases are tagged manually (`git tag vX.Y.Z` on main), which triggers the GHCR publish workflow.
 
 ## Reporting a broken platform
 

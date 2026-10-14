@@ -49,7 +49,6 @@ COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/packages ./packages
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/assets ./assets
-# x-release-please-version
 LABEL org.opencontainers.image.title="Snagbox" \
       org.opencontainers.image.description="Paste a link, snag the media: a self-hostable downloader API." \
       org.opencontainers.image.url="https://github.com/fabwaseem/snagbox" \
