@@ -12,7 +12,7 @@ jobs:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/downloader
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 10
       - uses: actions/setup-node@v4
