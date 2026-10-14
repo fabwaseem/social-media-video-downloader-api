@@ -2,34 +2,21 @@ import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
 import { execFile } from "child_process";
 import extract from "extract-zip";
-import { createWriteStream } from "fs";
 import * as fsSync from "fs";
 import * as fs from "fs/promises";
 import * as os from "os";
 import * as path from "path";
-import { pipeline } from "stream/promises";
 import { promisify } from "util";
-import { createHash } from "crypto";
 import { AppConfigService } from "../config/app-config.service";
-import { safeFetch } from "../common/http/safe-fetch";
 import { StorageService } from "../storage/storage.service";
+import { cookieDigest, looksLikeCookieJar } from "./binaries/cookies";
+import { downloadVerifiedFile } from "./binaries/download";
+import { pinnedChecksum, resolveYtdlpVersion, standaloneAssetName, ytdlpAssetUrl } from "./binaries/release";
+
+export { looksLikeCookieJar } from "./binaries/cookies";
+export { PINNED_YTDLP_VERSION } from "./binaries/release";
 
 const execFileAsync = promisify(execFile);
-
-/**
- * Release downloaded when no yt-dlp binary is already installed.
- * Override with YTDLP_VERSION. Checksums are for this pin only.
- */
-export const PINNED_YTDLP_VERSION = "2026.08.19";
-
-const PINNED_SHA256: Record<string, string> = {
-  "2026.08.19/yt-dlp": "1fa6733c37ea6fb51c99ad8fe785e7b7e5f3246c9b980230329d4fb72ed8d4d6",
-  "2026.08.19/yt-dlp.exe": "66674953fe251b89f4d08c5f0e35e0728679bd67ab3d7d05c0562af101dd3e7a",
-  "2026.08.19/yt-dlp_linux": "58162f9bfdc27458ea47bfcb311cf47028f17d8154a8bf7d689861d46399230a",
-  "2026.08.19/yt-dlp_linux_aarch64": "b16e4dab368a816cd05d477d698a605a6ae87ccee1c8ffd38fa21d7254141fcc",
-  "2026.08.19/yt-dlp_macos": "0f192b7ec147ab6288885d6351d9ab67367640029b4377576ef46dd79cf7b202",
-  "2026.08.19/yt-dlp_x86.exe": "a8f91bd41452506bc81ebd2f369b186fea0ee7075413ba00cef9fd346a0a5d0c",
-};
 
 /**
  * Where the cookie jar lives in the bucket.
@@ -38,24 +25,6 @@ const PINNED_SHA256: Record<string, string> = {
  * endpoint refuses any key containing a separator for exactly this reason.
  */
 const COOKIE_OBJECT_KEY = "internal/cookies.txt";
-
-/**
- * Cheap sanity check that a blob is a Netscape cookie jar with real entries.
- *
- * Guards both directions: a malformed COOKIES_B64 never becomes the live jar,
- * and a truncated local file never overwrites a good stored one.
- */
-export function looksLikeCookieJar(text: string): boolean {
-  if (!text || text.length < 32) return false;
-  const lines = text
-    .split(/\r?\n/)
-    .filter((l) => l.trim() && !l.trimStart().startsWith("#"));
-  return lines.some((l) => l.split("\t").length >= 7);
-}
-
-function digest(text: string): string {
-  return createHash("sha256").update(text).digest("hex");
-}
 
 const FFMPEG_URLS: Partial<Record<string, string>> = {
   "win32:x64":
@@ -427,27 +396,16 @@ export class BinariesService implements OnModuleInit {
   }
 
   private ytdlpVersion(): string {
-    return this.config.ytdlpVersion || PINNED_YTDLP_VERSION;
-  }
-
-  private assetUrl(name: string): string {
-    return `https://github.com/yt-dlp/yt-dlp/releases/download/${this.ytdlpVersion()}/${name}`;
+    return resolveYtdlpVersion(this.config.ytdlpVersion);
   }
 
   private standaloneAsset(): string | null {
-    const platform = os.platform();
-    const arch = os.arch();
-    if (platform === "win32") return arch === "x64" ? "yt-dlp.exe" : "yt-dlp_x86.exe";
-    if (platform === "darwin") return "yt-dlp_macos";
-    if (platform === "linux") {
-      if (arch === "x64") return "yt-dlp_linux";
-      if (arch === "arm64") return "yt-dlp_linux_aarch64";
-    }
-    return null;
+    return standaloneAssetName();
   }
 
   private async downloadAsset(name: string, savePath: string): Promise<void> {
-    await this.downloadFile(this.assetUrl(name), savePath, PINNED_SHA256[`${this.ytdlpVersion()}/${name}`]);
+    const version = this.ytdlpVersion();
+    await downloadVerifiedFile(ytdlpAssetUrl(version, name), savePath, pinnedChecksum(version, name));
   }
 
   private async resolveFfmpeg(binDir: string): Promise<void> {
@@ -485,7 +443,7 @@ export class BinariesService implements OnModuleInit {
     try {
       this.logger.log("Downloading ffmpeg…");
       const zipPath = path.join(binDir, "ffmpeg.zip");
-      await this.downloadFile(url, zipPath);
+      await downloadVerifiedFile(url, zipPath);
       await extract(zipPath, { dir: binDir });
       await fs.unlink(zipPath).catch(() => undefined);
       if (os.platform() !== "win32") await fs.chmod(managed, 0o755).catch(() => undefined);
@@ -517,7 +475,7 @@ export class BinariesService implements OnModuleInit {
     if (stored && looksLikeCookieJar(stored)) {
       await fs.writeFile(target, stored, { mode: 0o600 });
       this._cookiesPath = target;
-      this.cookieDigest = digest(stored);
+      this.cookieDigest = cookieDigest(stored);
       this.logger.log("Cookies restored from object storage");
       return;
     }
@@ -580,7 +538,7 @@ export class BinariesService implements OnModuleInit {
       return;
     }
 
-    const current = digest(text);
+    const current = cookieDigest(text);
     if (current === this.cookieDigest) return;
 
     try {
@@ -592,26 +550,4 @@ export class BinariesService implements OnModuleInit {
     }
   }
 
-  private async downloadFile(fileUrl: string, savePath: string, sha256?: string): Promise<void> {
-    const cleanup = () => {
-      if (fsSync.existsSync(savePath)) fsSync.unlinkSync(savePath);
-    };
-    const response = await safeFetch(fileUrl, { timeoutMs: 120_000, maxBytes: 400 * 1024 * 1024 });
-    if (response.status !== 200) {
-      response.body.resume();
-      throw new Error(`Download failed with status ${response.status}`);
-    }
-    try {
-      await pipeline(response.body, createWriteStream(savePath));
-    } catch (error) {
-      cleanup();
-      throw error;
-    }
-    if (!sha256) return;
-    const actual = createHash("sha256").update(await fs.readFile(savePath)).digest("hex");
-    if (actual !== sha256) {
-      cleanup();
-      throw new Error(`Checksum mismatch for ${fileUrl}`);
-    }
-  }
 }

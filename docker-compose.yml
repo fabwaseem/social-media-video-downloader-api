@@ -5,6 +5,7 @@ services:
       - "3001:3001"
     environment:
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/downloader
+      REDIS_URL: redis://redis:6379
       # Local opt-out. Unset before this port is reachable beyond your machine.
       AUTH_DISABLED: "true"
       NODE_ENV: production
@@ -19,6 +20,18 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
 
   postgres:
     image: postgres:16-alpine

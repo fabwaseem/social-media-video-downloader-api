@@ -1,6 +1,8 @@
 import { Injectable } from "@nestjs/common";
 import { randomBytes } from "crypto";
 import { PrismaService } from "../prisma/prisma.service";
+import { MemoryRateLimitStore, RedisRateLimitStore } from "../redis/rate-limit.store";
+import { RedisService } from "../redis/redis.service";
 
 export interface ValidatedKey {
   id: string;
@@ -14,12 +16,16 @@ const VALIDATION_CACHE_MAX = 1000;
 
 @Injectable()
 export class ApiKeyService {
-  /** In-memory sliding window: keyId -> request timestamps (ms). */
-  private readonly windows = new Map<string, number[]>();
   /** Short-lived validation cache: raw key -> result. Saves a DB hit per request. */
   private readonly cache = new Map<string, { value: ValidatedKey | null; expires: number }>();
+  private readonly limits: RedisRateLimitStore;
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    redis: RedisService,
+  ) {
+    this.limits = new RedisRateLimitStore(redis, new MemoryRateLimitStore());
+  }
 
   async createKey(input: {
     name: string;
@@ -99,24 +105,7 @@ export class ApiKeyService {
   }
 
   /** Per-key sliding-window rate limit. Returns remaining quota or -1 when exceeded. */
-  consumeQuota(key: ValidatedKey): number {
-    const now = Date.now();
-    const windowMs = 60_000;
-
-    // Opportunistic pruning keeps the map from growing with dead keys.
-    if (this.windows.size > 1000) {
-      for (const [id, stamps] of this.windows) {
-        if (stamps.every((t) => now - t >= windowMs)) this.windows.delete(id);
-      }
-    }
-
-    const stamps = (this.windows.get(key.id) ?? []).filter((t) => now - t < windowMs);
-    if (stamps.length >= key.rateLimitPerMinute) {
-      this.windows.set(key.id, stamps);
-      return -1;
-    }
-    stamps.push(now);
-    this.windows.set(key.id, stamps);
-    return key.rateLimitPerMinute - stamps.length;
+  consumeQuota(key: ValidatedKey): Promise<number> {
+    return this.limits.consume(key.id, key.rateLimitPerMinute);
   }
 }

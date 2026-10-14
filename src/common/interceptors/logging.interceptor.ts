@@ -8,10 +8,13 @@ import {
 import type { Request, Response } from "express";
 import { Observable } from "rxjs";
 import { tap } from "rxjs/operators";
+import { MetricsService } from "../../metrics/metrics.service";
 
 @Injectable()
 export class LoggingInterceptor implements NestInterceptor {
   private readonly logger = new Logger("HTTP");
+
+  constructor(private readonly metrics: MetricsService) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const req = context.switchToHttp().getRequest<Request>();
@@ -21,9 +24,13 @@ export class LoggingInterceptor implements NestInterceptor {
     return next.handle().pipe(
       tap({
         next: () => {
+          this.metrics.recordHttp(req.method, String(res.statusCode));
           this.logger.log(
             `${req.method} ${req.originalUrl} ${res.statusCode} ${Date.now() - started}ms`,
           );
+        },
+        error: () => {
+          this.metrics.recordHttp(req.method, String(res.statusCode || 500));
         },
       }),
     );

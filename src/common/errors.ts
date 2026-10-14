@@ -14,6 +14,12 @@ export enum ErrorCode {
   QUEUE_FULL = "QUEUE_FULL",
   INVALID_API_KEY = "INVALID_API_KEY",
   RATE_LIMITED = "RATE_LIMITED",
+  BLOCKED = "BLOCKED",
+  PRIVATE = "PRIVATE",
+  GEO_RESTRICTED = "GEO_RESTRICTED",
+  LOGIN_REQUIRED = "LOGIN_REQUIRED",
+  UNAVAILABLE = "UNAVAILABLE",
+  UNSUPPORTED = "UNSUPPORTED",
 }
 
 /** HttpException carrying a stable error code alongside the message. */

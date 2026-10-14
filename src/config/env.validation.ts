@@ -30,6 +30,9 @@ export const envSchema = z.object({
    * then a hash of DATABASE_URL, so links stay unguessable without a new secret.
    */
   FILE_LINK_SECRET: z.string().optional().default(""),
+  /** Redis for the job queue, API-key rate limits, the throttler and the media cache. Empty uses in-memory fallbacks. */
+  REDIS_URL: z.string().optional().default(""),
+  LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).optional().default("info"),
   ADMIN_TOKEN: z.string().optional().default(""),
   /** Signing secret for Better Auth sessions/tokens. Required in production. */
   BETTER_AUTH_SECRET: z.string().optional().default(""),
