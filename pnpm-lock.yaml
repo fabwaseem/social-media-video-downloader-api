@@ -17,7 +17,7 @@ importers:
       '@aws-sdk/s3-request-presigner':
         specifier: ^3.1103.0
         version: 3.1111.0
-      '@downloader/shared':
+      '@snagbox/shared':
         specifier: file:./packages/shared
         version: link:packages/shared
       '@nestjs/common':

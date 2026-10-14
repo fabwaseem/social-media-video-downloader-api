@@ -17,7 +17,7 @@ datasource db {
 }
 
 // status/platform/kind stay as text columns, validated at the application layer
-// against the shared union types in @vidyoza/shared.
+// against the shared union types in @snagbox/shared.
 
 model ApiKey {
   id                 String     @id @default(uuid())

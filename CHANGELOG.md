@@ -1,5 +1,7 @@
 # Changelog
 
+Snagbox release notes. Versions follow semantic versioning. A `v2.0.0` tag publishes `ghcr.io/fabwaseem/snagbox:2.0.0` and `ghcr.io/fabwaseem/snagbox:latest`.
+
 ## 2.0.0
 
 - Redis-backed queue, rate limits, and media cache, with in-memory fallbacks.

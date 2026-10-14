@@ -1,4 +1,4 @@
-import type { Platform } from "@downloader/shared";
+import type { Platform } from "@snagbox/shared";
 
 /**
  * Media resolved by an extractor other than yt-dlp.

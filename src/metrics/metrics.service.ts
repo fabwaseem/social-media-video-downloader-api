@@ -8,6 +8,7 @@ export class MetricsService {
   private readonly jobs: Counter<"status" | "platform">;
 
   constructor() {
+    this.registry.setDefaultLabels({ service: "snagbox" });
     collectDefaultMetrics({ register: this.registry });
     this.httpRequests = new Counter({
       name: "http_requests_total",

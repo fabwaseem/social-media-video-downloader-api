@@ -83,7 +83,7 @@ export class StorageService implements OnModuleInit {
           LifecycleConfiguration: {
             Rules: [
               {
-                ID: "vidyoza-expire-downloads",
+                ID: "snagbox-expire-downloads",
                 Status: "Enabled",
                 Filter: { Prefix: "" },
                 Expiration: { Days: days },

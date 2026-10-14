@@ -50,6 +50,7 @@ export class HealthController {
     const redis = this.redis.enabled ? ((await this.redis.ping()) ? "up" : "down") : "disabled";
 
     return {
+      service: "snagbox",
       redis,
       storage,
       status: database && engine.ytdlp ? "ok" : "degraded",

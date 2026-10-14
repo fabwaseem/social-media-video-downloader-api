@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
-import type { MediaInfo, Platform, VideoQuality } from "@downloader/shared";
-import { AUDIO_FORMATS, AUDIO_QUALITIES, VIDEO_FORMATS, detectPlatform } from "@downloader/shared";
+import type { MediaInfo, Platform, VideoQuality } from "@snagbox/shared";
+import { AUDIO_FORMATS, AUDIO_QUALITIES, VIDEO_FORMATS, detectPlatform } from "@snagbox/shared";
 import { basename, dirname, join } from "path";
 import { AppConfigService } from "../config/app-config.service";
 import { DirectDownloadService } from "./direct-download.service";

@@ -1,6 +1,6 @@
-# Contributing
+# Contributing to Snagbox
 
-Thanks for helping. Issues and pull requests are welcome.
+Thanks for helping. Issues and pull requests are welcome. The repository is [github.com/fabwaseem/snagbox](https://github.com/fabwaseem/snagbox).
 
 ## Setup
 

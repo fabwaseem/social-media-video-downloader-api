@@ -1,8 +1,8 @@
-# Security
+# Snagbox security
 
 ## Reporting
 
-Please report vulnerabilities privately to the repository owner. Do not open a public issue that includes exploit details, cookies, or live credentials. Give a few days for a response before discussing it publicly.
+Please report Snagbox vulnerabilities privately to the repository owner. Do not open a public issue that includes exploit details, cookies, or live credentials. Give a few days for a response before discussing it publicly.
 
 ## What this API already refuses
 

@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import type { JobEvent } from "@downloader/shared";
+import type { JobEvent } from "@snagbox/shared";
 import { Observable, ReplaySubject } from "rxjs";
 
 /**

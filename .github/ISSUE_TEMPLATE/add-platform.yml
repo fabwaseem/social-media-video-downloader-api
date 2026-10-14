@@ -1,5 +1,5 @@
 name: Add platform
-description: Request a new site plugin
+description: Request a new site plugin for Snagbox
 labels: ["platform"]
 body:
   - type: input

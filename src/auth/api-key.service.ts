@@ -33,7 +33,7 @@ export class ApiKeyService {
     maxDurationSeconds?: number;
     expiresAt?: Date;
   }) {
-    const key = `vz_${randomBytes(24).toString("hex")}`;
+    const key = `sb_${randomBytes(24).toString("hex")}`;
     return this.prisma.apiKey.create({
       data: {
         key,

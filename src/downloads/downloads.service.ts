@@ -1,6 +1,6 @@
 import { HttpStatus, Injectable, Logger } from "@nestjs/common";
-import type { DownloadJob, JobStatus } from "@downloader/shared";
-import { isTerminalStatus, resolvePlatform } from "@downloader/shared";
+import type { DownloadJob, JobStatus } from "@snagbox/shared";
+import { isTerminalStatus, resolvePlatform } from "@snagbox/shared";
 import { SsrfError, assertPublicHttpUrl } from "../common/http/safe-fetch";
 import { Prisma } from "../generated/prisma/client";
 import { AppConfigService } from "../config/app-config.service";

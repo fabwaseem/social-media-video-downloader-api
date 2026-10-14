@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
-import type { ChannelTab, CollectionInfo, CreateDownloadRequest, MediaInfo, PlaylistInfo } from "@downloader/shared";
-import { detectPlatform } from "@downloader/shared";
+import type { ChannelTab, CollectionInfo, CreateDownloadRequest, MediaInfo, PlaylistInfo } from "@snagbox/shared";
+import { detectPlatform } from "@snagbox/shared";
 import { ChildProcess, execFile, spawn } from "child_process";
 import * as fsSync from "fs";
 import { promisify } from "util";

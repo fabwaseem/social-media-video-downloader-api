@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import type { ChannelTab, CollectionInfo } from "@downloader/shared";
+import type { ChannelTab, CollectionInfo } from "@snagbox/shared";
 import {
   CHANNEL_TABS,
   PLATFORM_META,
@@ -9,7 +9,7 @@ import {
   isValidHttpUrl,
   normalizeCollectionUrl,
   resolvePlatform,
-} from "@downloader/shared";
+} from "@snagbox/shared";
 import { ApiException, ErrorCode } from "../common/errors";
 import { SsrfError, assertPublicHttpUrl } from "../common/http/safe-fetch";
 import { AppConfigService } from "../config/app-config.service";

@@ -1,6 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
-import type { JobStatus } from "@downloader/shared";
-import { isTerminalStatus } from "@downloader/shared";
+import type { JobStatus } from "@snagbox/shared";
+import { isTerminalStatus } from "@snagbox/shared";
 import * as fs from "fs/promises";
 import { join } from "path";
 import { AppConfigService } from "../config/app-config.service";

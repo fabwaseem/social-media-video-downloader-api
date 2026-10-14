@@ -14,6 +14,6 @@ module.exports = {
     ],
   },
   moduleNameMapper: {
-    "^@downloader/shared$": "<rootDir>/packages/shared/src/index.ts",
+    "^@snagbox/shared$": "<rootDir>/packages/shared/src/index.ts",
   },
 };

@@ -1,7 +1,7 @@
 import { execFile } from "child_process";
 import { readFileSync } from "fs";
 import { join } from "path";
-import type { CreateDownloadRequest } from "@downloader/shared";
+import type { CreateDownloadRequest } from "@snagbox/shared";
 import { AppConfigService } from "../config/app-config.service";
 import { BinariesService } from "./binaries.service";
 import type { Attempt } from "./resilience";

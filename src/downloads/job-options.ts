@@ -1,4 +1,4 @@
-import type { CreateDownloadRequest } from "@downloader/shared";
+import type { CreateDownloadRequest } from "@snagbox/shared";
 
 /** Options that have to survive a process restart, stored on the download row. */
 export interface StoredJobOptions {
