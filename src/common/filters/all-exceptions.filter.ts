@@ -9,6 +9,7 @@ import {
 import type { ApiError } from "@vidyoza/shared";
 import type { Request, Response } from "express";
 import { ApiException } from "../errors";
+import { EngineError } from "../../engine/ytdlp/errors";
 
 /**
  * Converts every uncaught error into a consistent JSON envelope and keeps
@@ -49,6 +50,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
       if (exception instanceof ApiException) {
         code = exception.code;
       }
+    } else if (exception instanceof EngineError) {
+      status = exception.status;
+      message = exception.message;
+      code = exception.code;
     } else if (exception instanceof Error) {
       message =
         process.env.NODE_ENV === "production" ? "Internal server error" : exception.message;

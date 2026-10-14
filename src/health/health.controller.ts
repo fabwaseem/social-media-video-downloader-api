@@ -6,6 +6,7 @@ import { BinariesService } from "../engine/binaries.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { StorageService } from "../storage/storage.service";
 import { StorageQuotaService } from "../storage/storage-quota.service";
+import { RedisService } from "../redis/redis.service";
 
 @ApiTags("Health")
 @Controller({ path: "health", version: "2" })
@@ -17,6 +18,7 @@ export class HealthController {
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
     private readonly quota: StorageQuotaService,
+    private readonly redis: RedisService,
   ) {}
 
   @Public()
@@ -45,7 +47,10 @@ export class HealthController {
       }
     }
 
+    const redis = this.redis.enabled ? ((await this.redis.ping()) ? "up" : "down") : "disabled";
+
     return {
+      redis,
       storage,
       status: database && engine.ytdlp ? "ok" : "degraded",
       uptimeSeconds: Math.round((Date.now() - this.startedAt) / 1000),

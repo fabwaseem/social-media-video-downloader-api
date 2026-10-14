@@ -255,6 +255,8 @@ Copy `.env.example` to `.env` and adjust. Every variable has a sensible default 
 | `AUTH_DISABLED` | `false` | Allow requests with no API key. Explicit opt-out; `NODE_ENV` does not do this |
 | `PORT` | `3001` | HTTP port |
 | `DATABASE_URL` | — | PostgreSQL connection string (**required**) |
+| `REDIS_URL` | `` | Redis for the queue, rate limits and media cache. Empty uses in-memory fallbacks |
+| `LOG_LEVEL` | `info` | Pino log level |
 | `ALLOWED_ORIGINS` | `` | Comma-separated origins allowed by CORS |
 | `FRONTEND_SECRET` | `` | Shared secret injected by a frontend proxy (`X-Frontend-Key`) |
 | `ADMIN_TOKEN` | `` | Token for `/v2/admin` endpoints; empty = admin disabled |
@@ -330,7 +332,7 @@ Set `POSTGRES_PASSWORD` to any local database password, then:
 docker compose up --build
 ```
 
-The API listens on `http://localhost:3001`. Compose sets `AUTH_DISABLED=true` so a local container can be tried without creating a key — unset that variable before exposing the port. Migrations run on startup.
+The API listens on `http://localhost:3001`. Compose starts Postgres and Redis and sets `AUTH_DISABLED=true` so a local container can be tried without creating a key — unset that variable before exposing the port. Prometheus metrics are at `/metrics`. Migrations run on startup.
 
 ```bash
 # YouTube token provider

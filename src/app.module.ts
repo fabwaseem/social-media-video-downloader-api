@@ -16,25 +16,32 @@ import { StorageModule } from "./storage/storage.module";
 import { FilesModule } from "./files/files.module";
 import { HealthModule } from "./health/health.module";
 import { MediaModule } from "./media/media.module";
+import { MetricsModule } from "./metrics/metrics.module";
 import { PrismaModule } from "./prisma/prisma.module";
+import { RedisModule } from "./redis/redis.module";
+import { RedisThrottlerStorage } from "./redis/throttler-storage";
 
 @Module({
   imports: [
     AppConfigModule,
+    RedisModule,
+    MetricsModule,
     PrismaModule,
     EngineModule,
     StorageModule,
     AuthModule,
     ScheduleModule.forRoot(),
     ThrottlerModule.forRootAsync({
-      inject: [AppConfigService],
-      useFactory: (config: AppConfigService) => ({
+      imports: [RedisModule],
+      inject: [AppConfigService, RedisThrottlerStorage],
+      useFactory: (config: AppConfigService, storage: RedisThrottlerStorage) => ({
         throttlers: [
           {
             ttl: config.throttleTtlSeconds * 1000,
             limit: config.throttleLimit,
           },
         ],
+        storage,
       }),
     }),
     HealthModule,

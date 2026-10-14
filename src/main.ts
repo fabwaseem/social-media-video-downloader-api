@@ -1,10 +1,11 @@
-import { ValidationPipe, VersioningType } from "@nestjs/common";
+import { Logger, ValidationPipe, VersioningType } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { json, type NextFunction, type Request, type Response } from "express";
 import helmet from "helmet";
 import { AppModule } from "./app.module";
+import { createLogger, PinoNestLogger } from "./logging/pino-logger";
 import { AUTH, type Auth } from "./auth/auth.instance";
 import { AppConfigService } from "./config/app-config.service";
 
@@ -12,10 +13,11 @@ async function bootstrap(): Promise<void> {
   // Nest's own body parser is disabled: Better Auth must read the raw request
   // body itself, and a pre-consumed stream would break every auth endpoint.
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
-    bufferLogs: false,
+    bufferLogs: true,
     bodyParser: false,
   });
   const config = app.get(AppConfigService);
+  app.useLogger(new PinoNestLogger(createLogger(config.logLevel)));
 
   // All real traffic arrives via the Next.js proxy (and often a platform LB in
   // front of that). Without trust proxy, req.ip is the proxy's address and
@@ -113,10 +115,10 @@ async function bootstrap(): Promise<void> {
   }
 
   await app.listen(config.port);
-  // eslint-disable-next-line no-console
-  console.log(
+  Logger.log(
     `Vidyoza API v2 listening on http://localhost:${config.port}` +
       (config.swaggerEnabled ? " (docs at /docs)" : ""),
+    "Bootstrap",
   );
 }
 

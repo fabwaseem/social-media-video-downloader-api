@@ -52,6 +52,10 @@ model Download {
   storageKey    String?
   fileSizeBytes BigInt?
   error         String?
+  /// Machine-readable failure code when status is FAILED.
+  errorCode     String?
+  /// Clip, subtitle and metadata flags needed to resume a job after restart.
+  options       Json?
   progress      Float     @default(0)
   apiKey        ApiKey?   @relation(fields: [apiKeyId], references: [id])
   apiKeyId      String?

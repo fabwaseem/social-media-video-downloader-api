@@ -6,6 +6,7 @@ import { BinariesService } from "../src/engine/binaries.service";
 import { PrismaService } from "../src/prisma/prisma.service";
 import { StorageService } from "../src/storage/storage.service";
 import { StorageQuotaService } from "../src/storage/storage-quota.service";
+import { RedisService } from "../src/redis/redis.service";
 
 describe("Health (e2e)", () => {
   let app: INestApplication;
@@ -30,6 +31,7 @@ describe("Health (e2e)", () => {
         { provide: PrismaService, useValue: { $queryRaw: async () => 1 } },
         { provide: StorageService, useValue: { remote: false } },
         { provide: StorageQuotaService, useValue: { status: async () => ({}) } },
+        { provide: RedisService, useValue: { enabled: false, ping: async () => false } },
       ],
     }).compile();
 
@@ -39,7 +41,7 @@ describe("Health (e2e)", () => {
   });
 
   afterAll(async () => {
-    await app.close();
+    if (app) await app.close();
   });
 
   it("GET /v2/health returns engine status", () => {

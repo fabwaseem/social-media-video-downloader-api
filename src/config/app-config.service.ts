@@ -42,6 +42,14 @@ export class AppConfigService {
    * Secret for per-job file links. An explicit FILE_LINK_SECRET wins, then the
    * Better Auth secret, then a stable hash of the database URL.
    */
+  get redisUrl(): string {
+    return this.config.get("REDIS_URL", { infer: true }).trim();
+  }
+
+  get logLevel(): string {
+    return this.config.get("LOG_LEVEL", { infer: true });
+  }
+
   get fileLinkSecret(): string {
     const explicit = this.config.get("FILE_LINK_SECRET", { infer: true });
     if (explicit) return explicit;

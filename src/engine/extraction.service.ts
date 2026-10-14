@@ -4,11 +4,10 @@ import { AUDIO_FORMATS, AUDIO_QUALITIES, VIDEO_FORMATS, detectPlatform } from "@
 import { basename, dirname, join } from "path";
 import { AppConfigService } from "../config/app-config.service";
 import { DirectDownloadService } from "./direct-download.service";
+import { MediaCache } from "./media-cache";
 import { TikTokEmbedProvider } from "./providers/tiktok-embed.provider";
 import type { MediaProvider, ProviderMedia } from "./providers/types";
 import { CancelledError, RunDownloadInput, YtdlpService } from "./ytdlp.service";
-
-const INFO_CACHE_MAX = 500;
 
 /**
  * Resolves media through whichever engine can actually reach it.
@@ -25,18 +24,14 @@ const INFO_CACHE_MAX = 500;
 export class ExtractionService {
   private readonly logger = new Logger(ExtractionService.name);
   private readonly providers: MediaProvider[];
-
-  /**
-   * TTL cache keyed by URL, storing promises so concurrent callers share one
-   * extraction. Extraction costs seconds; the paste → download flow alone asks
-   * for the same URL more than once.
-   */
-  private readonly infoCache = new Map<string, { promise: Promise<MediaInfo>; expires: number }>();
+  /** In-flight extractions so concurrent callers share one process. */
+  private readonly inflight = new Map<string, Promise<MediaInfo>>();
 
   constructor(
     private readonly ytdlp: YtdlpService,
     private readonly direct: DirectDownloadService,
     private readonly config: AppConfigService,
+    private readonly cache: MediaCache,
     tiktokEmbed: TikTokEmbedProvider,
   ) {
     this.providers = [tiktokEmbed];
@@ -44,21 +39,22 @@ export class ExtractionService {
 
   async getMediaInfo(url: string): Promise<MediaInfo> {
     const ttl = this.config.mediaCacheTtlMs;
-    if (ttl <= 0) return this.resolveInfo(url);
-
-    const now = Date.now();
-    const hit = this.infoCache.get(url);
-    if (hit && hit.expires > now) return hit.promise;
-
-    const promise = this.resolveInfo(url);
-    // Never cache failures — transient platform errors must stay retryable.
-    promise.catch(() => this.infoCache.delete(url));
-
-    if (this.infoCache.size >= INFO_CACHE_MAX) {
-      const oldest = this.infoCache.keys().next().value;
-      if (oldest !== undefined) this.infoCache.delete(oldest);
+    if (ttl > 0) {
+      const cached = await this.cache.get(url);
+      if (cached) return cached;
     }
-    this.infoCache.set(url, { promise, expires: now + ttl });
+    const existing = this.inflight.get(url);
+    if (existing) return existing;
+
+    const promise = this.resolveInfo(url)
+      .then(async (info) => {
+        if (ttl > 0) await this.cache.set(url, info, ttl);
+        return info;
+      })
+      .finally(() => {
+        this.inflight.delete(url);
+      });
+    this.inflight.set(url, promise);
     return promise;
   }
 

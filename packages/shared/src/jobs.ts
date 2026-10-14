@@ -64,6 +64,8 @@ export interface DownloadJob {
   fileUrl: string | null;
   fileSizeBytes: number | null;
   error: string | null;
+  /** Stable failure code when status is FAILED. */
+  errorCode: string | null;
   progress: number;
   createdAt: string;
   updatedAt: string;

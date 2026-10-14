@@ -57,7 +57,7 @@ export class ApiKeyGuard implements CanActivate {
           HttpStatus.UNAUTHORIZED,
         );
       }
-      if (this.apiKeys.consumeQuota(key) < 0) {
+      if ((await this.apiKeys.consumeQuota(key)) < 0) {
         throw new ApiException(
           ErrorCode.RATE_LIMITED,
           "API key rate limit exceeded",
