@@ -25,7 +25,6 @@ export class JobQueue implements OnModuleInit, OnModuleDestroy {
   private handler: JobHandler | null = null;
   private bull: Queue<DownloadPayload> | null = null;
   private worker: Worker<DownloadPayload> | null = null;
-  private workerStarted = false;
 
   constructor(private readonly config: AppConfigService) {
     this.memory = new MemoryQueue(config.maxConcurrentJobs, (jobId, error) => {
@@ -40,6 +39,12 @@ export class JobQueue implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleInit(): Promise<void> {
+    await this.ensureQueue();
+    this.startWorker();
+  }
+
+  private async ensureQueue(): Promise<void> {
+    if (this.bull) return;
     const url = this.config.redisUrl;
     if (!url) {
       this.logger.log("REDIS_URL is unset; download queue is in-memory");
@@ -144,9 +149,12 @@ export class JobQueue implements OnModuleInit, OnModuleDestroy {
     return "untracked";
   }
 
+  /**
+   * setHandler and onModuleInit can run in either order. The worker starts
+   * once, and only once both the handler and the Redis queue exist.
+   */
   private startWorker(): void {
-    if (this.workerStarted || !this.bull) return;
-    this.workerStarted = true;
+    if (this.worker || !this.bull || !this.handler) return;
     this.worker = new Worker<DownloadPayload>(
       "downloads",
       async (job: Job<DownloadPayload>) => {
