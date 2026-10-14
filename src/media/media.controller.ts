@@ -1,7 +1,7 @@
 import { Controller, Get, HttpStatus, ParseIntPipe, Query } from "@nestjs/common";
 import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { Throttle } from "@nestjs/throttler";
-import { CHANNEL_TABS } from "@vidyoza/shared";
+import { CHANNEL_TABS } from "@downloader/shared";
 import { MediaService } from "./media.service";
 
 @ApiTags("Media")

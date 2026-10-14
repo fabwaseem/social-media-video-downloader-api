@@ -1,4 +1,4 @@
-import type { Platform } from "@vidyoza/shared";
+import type { Platform } from "@downloader/shared";
 
 /**
  * Recovery strategy for flaky extractions.

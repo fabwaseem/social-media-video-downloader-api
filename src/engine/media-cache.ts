@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import type { MediaInfo } from "@vidyoza/shared";
+import type { MediaInfo } from "@downloader/shared";
 import { RedisService } from "../redis/redis.service";
 
 interface Entry<T> {

@@ -12,7 +12,7 @@ COPY packages/shared/package.json packages/shared/package.json
 RUN pnpm install --frozen-lockfile
 COPY . .
 ENV DATABASE_URL=postgresql://postgres:postgres@localhost:5432/downloader
-RUN pnpm --filter @vidyoza/shared build \
+RUN pnpm --filter @downloader/shared build \
   && pnpm exec prisma generate \
   && pnpm exec nest build
 

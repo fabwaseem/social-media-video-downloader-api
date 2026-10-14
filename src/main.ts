@@ -98,17 +98,20 @@ async function bootstrap(): Promise<void> {
     maxAge: 3600,
   });
 
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle("Downloader API")
+    .setDescription(
+      "Download jobs for public social media URLs, with live progress, signed file links, and optional webhooks.",
+    )
+    .setVersion("2.0.0")
+    .addApiKey({ type: "apiKey", in: "header", name: "X-API-Key" }, "api-key")
+    .addApiKey({ type: "apiKey", in: "header", name: "X-Admin-Token" }, "admin-token")
+    .build();
+  const document = SwaggerModule.createDocument(app, swaggerConfig);
+  app.getHttpAdapter().get("/openapi.json", ((_req: unknown, res: { json: (body: unknown) => void }) => {
+    res.json(document);
+  }) as never);
   if (config.swaggerEnabled) {
-    const swaggerConfig = new DocumentBuilder()
-      .setTitle("Vidyoza API v2")
-      .setDescription(
-        "Robust social media download engine — media info, download jobs with live SSE progress, secure file delivery.",
-      )
-      .setVersion("2.0.0")
-      .addApiKey({ type: "apiKey", in: "header", name: "X-API-Key" }, "api-key")
-      .addApiKey({ type: "apiKey", in: "header", name: "X-Admin-Token" }, "admin-token")
-      .build();
-    const document = SwaggerModule.createDocument(app, swaggerConfig);
     SwaggerModule.setup("docs", app, document, {
       swaggerOptions: { persistAuthorization: true, tagsSorter: "alpha" },
     });

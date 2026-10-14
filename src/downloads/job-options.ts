@@ -1,4 +1,4 @@
-import type { CreateDownloadRequest } from "@vidyoza/shared";
+import type { CreateDownloadRequest } from "@downloader/shared";
 
 /** Options that have to survive a process restart, stored on the download row. */
 export interface StoredJobOptions {
@@ -6,9 +6,13 @@ export interface StoredJobOptions {
   embedMetadata?: boolean;
   embedChapters?: boolean;
   embedSubtitles?: boolean;
+  writeSubtitles?: boolean;
+  writeThumbnail?: boolean;
+  videoCodec?: "h264";
   subtitleLang?: string;
   clipStart?: number;
   clipEnd?: number;
+  callbackUrl?: string;
   maxDurationSeconds?: number;
 }
 
@@ -28,7 +32,11 @@ export function readJobOptions(value: unknown): StoredJobOptions {
     embedMetadata: bool(raw.embedMetadata),
     embedChapters: bool(raw.embedChapters),
     embedSubtitles: bool(raw.embedSubtitles),
+    writeSubtitles: bool(raw.writeSubtitles),
+    writeThumbnail: bool(raw.writeThumbnail),
+    videoCodec: raw.videoCodec === "h264" ? "h264" : undefined,
     subtitleLang: typeof raw.subtitleLang === "string" ? raw.subtitleLang : undefined,
+    callbackUrl: typeof raw.callbackUrl === "string" ? raw.callbackUrl : undefined,
     clipStart: num(raw.clipStart),
     clipEnd: num(raw.clipEnd),
     maxDurationSeconds: num(raw.maxDurationSeconds),
@@ -42,7 +50,11 @@ export function jobOptionsFromDto(
     | "embedMetadata"
     | "embedChapters"
     | "embedSubtitles"
+    | "writeSubtitles"
+    | "writeThumbnail"
+    | "videoCodec"
     | "subtitleLang"
+    | "callbackUrl"
     | "clipStart"
     | "clipEnd"
   >,
@@ -53,7 +65,11 @@ export function jobOptionsFromDto(
     embedMetadata: dto.embedMetadata,
     embedChapters: dto.embedChapters,
     embedSubtitles: dto.embedSubtitles,
+    writeSubtitles: dto.writeSubtitles,
+    writeThumbnail: dto.writeThumbnail,
+    videoCodec: dto.videoCodec,
     subtitleLang: dto.subtitleLang,
+    callbackUrl: dto.callbackUrl,
     clipStart: dto.clipStart,
     clipEnd: dto.clipEnd,
     maxDurationSeconds,

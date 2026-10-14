@@ -1,9 +1,13 @@
+import { PLATFORM_PLUGINS, type KnownPlatform as PluginId, type PlatformPlugin } from "./platform-plugins";
+
+export { PLATFORM_PLUGINS, PLATFORMS, type PlatformPlugin } from "./platform-plugins";
+
 /**
  * Supported platforms and URL detection shared by API and web.
+ * `generic` is not detected; callers opt into it for any other public URL.
  */
-export const PLATFORMS = ["youtube", "instagram", "tiktok", "twitter", "facebook"] as const;
-
-export type Platform = (typeof PLATFORMS)[number];
+export type KnownPlatform = PluginId;
+export type Platform = KnownPlatform | "generic";
 
 export interface PlatformMeta {
   id: Platform;
@@ -17,90 +21,60 @@ export interface PlatformMeta {
   comingSoon?: boolean;
 }
 
-export const PLATFORM_META: Record<Platform, PlatformMeta> = {
-  youtube: {
-    id: "youtube",
-    name: "YouTube",
-    slug: "youtube",
-    color: "#ff0033",
-    domains: ["youtube.com", "youtu.be", "music.youtube.com"],
-    example: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-  },
-  instagram: {
-    id: "instagram",
-    name: "Instagram",
-    slug: "instagram",
-    color: "#e1306c",
-    domains: ["instagram.com", "instagr.am"],
-    example: "https://www.instagram.com/reel/Cxyz.../",
-  },
-  tiktok: {
-    id: "tiktok",
-    name: "TikTok",
-    slug: "tiktok",
-    color: "#25f4ee",
-    domains: ["tiktok.com", "vm.tiktok.com"],
-    example: "https://www.tiktok.com/@user/video/1234567890",
-  },
-  twitter: {
-    id: "twitter",
-    name: "X / Twitter",
-    slug: "twitter",
-    color: "#1d9bf0",
-    domains: ["twitter.com", "x.com", "t.co"],
-    example: "https://x.com/user/status/1234567890",
-  },
-  facebook: {
-    id: "facebook",
-    name: "Facebook",
-    slug: "facebook",
-    color: "#1877f2",
-    domains: ["facebook.com", "fb.watch", "fb.com", "m.facebook.com"],
-    example: "https://www.facebook.com/watch?v=1234567890",
-  },
-};
+function metaFromPlugin(plugin: PlatformPlugin): PlatformMeta {
+  return {
+    id: plugin.id as KnownPlatform,
+    name: plugin.name,
+    slug: plugin.slug,
+    color: plugin.color,
+    domains: plugin.domains,
+    example: plugin.example,
+  };
+}
 
-const URL_PATTERNS: Record<Platform, RegExp[]> = {
-  youtube: [
-    /^(https?:\/\/)?(www\.|m\.|music\.)?youtube\.com\/(watch\?v=|shorts\/|embed\/|live\/|playlist\?list=)[\w-]+/i,
-    /^(https?:\/\/)?youtu\.be\/[\w-]+/i,
-  ],
-  instagram: [/^(https?:\/\/)?(www\.)?instagram\.com\/(p|reel|reels|tv|stories)\/[\w.-]+/i],
-  tiktok: [
-    /^(https?:\/\/)?(www\.|m\.)?tiktok\.com\/@[\w.-]+\/(video|photo)\/\d+/i,
-    /^(https?:\/\/)?(vm|vt)\.tiktok\.com\/[\w-]+/i,
-    /^(https?:\/\/)?(www\.)?tiktok\.com\/t\/[\w-]+/i,
-  ],
-  twitter: [/^(https?:\/\/)?(www\.|mobile\.)?(twitter|x)\.com\/[\w]+\/status\/\d+/i],
-  facebook: [
-    /^(https?:\/\/)?(www\.|m\.|web\.)?facebook\.com\/.+\/videos\/.+/i,
-    /^(https?:\/\/)?(www\.|m\.|web\.)?facebook\.com\/(watch|reel|share)[/?].+/i,
-    /^(https?:\/\/)?fb\.watch\/[\w-]+/i,
-  ],
-};
+export const PLATFORM_META = Object.fromEntries([
+  ...PLATFORM_PLUGINS.map((plugin) => [plugin.id, metaFromPlugin(plugin)] as const),
+  [
+    "generic",
+    {
+      id: "generic",
+      name: "Generic",
+      slug: "generic",
+      color: "#666666",
+      domains: [] as string[],
+      example: "https://example.com/video",
+    } satisfies PlatformMeta,
+  ] as const,
+]) as Record<Platform, PlatformMeta>;
 
-/** Returns the platform a URL belongs to, or null when unsupported. */
-export function detectPlatform(url: string): Platform | null {
+/** Returns the platform a URL belongs to, or null when it is not a known plugin. */
+export function detectPlatform(url: string): KnownPlatform | null {
   const trimmed = url.trim();
   if (!trimmed) return null;
-  for (const platform of PLATFORMS) {
-    if (URL_PATTERNS[platform].some((re) => re.test(trimmed))) return platform;
+  for (const plugin of PLATFORM_PLUGINS) {
+    if (plugin.patterns.some((pattern) => pattern.test(trimmed))) return plugin.id;
   }
-  // Fallback: match on hostname for shortened/odd links.
   try {
     const { hostname } = new URL(trimmed.startsWith("http") ? trimmed : `https://${trimmed}`);
-    for (const platform of PLATFORMS) {
-      if (
-        PLATFORM_META[platform].domains.some(
-          (d) => hostname === d || hostname.endsWith(`.${d}`),
-        )
-      ) {
-        return platform;
+    for (const plugin of PLATFORM_PLUGINS) {
+      if (plugin.domains.some((domain) => hostname === domain || hostname.endsWith(`.${domain}`))) {
+        return plugin.id;
       }
     }
   } catch {
     return null;
   }
+  return null;
+}
+
+/**
+ * Known plugin, or `generic` when that mode is on and the value is an http(s) URL.
+ * The API still has to reject private addresses before it fetches the URL.
+ */
+export function resolvePlatform(url: string, allowGeneric: boolean): Platform | null {
+  const known = detectPlatform(url);
+  if (known) return known;
+  if (allowGeneric && isValidHttpUrl(url)) return "generic";
   return null;
 }
 

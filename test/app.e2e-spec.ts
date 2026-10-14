@@ -2,6 +2,7 @@ import { INestApplication, VersioningType } from "@nestjs/common";
 import { Test, TestingModule } from "@nestjs/testing";
 import request from "supertest";
 import { HealthController } from "../src/health/health.controller";
+import { PlaygroundController } from "../src/playground/playground.controller";
 import { BinariesService } from "../src/engine/binaries.service";
 import { PrismaService } from "../src/prisma/prisma.service";
 import { StorageService } from "../src/storage/storage.service";
@@ -13,7 +14,7 @@ describe("Health (e2e)", () => {
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      controllers: [HealthController],
+      controllers: [HealthController, PlaygroundController],
       providers: [
         {
           provide: BinariesService,
@@ -55,7 +56,13 @@ describe("Health (e2e)", () => {
       });
   });
 
-  it("GET / is not a route", () => {
-    return request(app.getHttpServer()).get("/").expect(404);
+  it("GET / serves the playground", () => {
+    return request(app.getHttpServer())
+      .get("/")
+      .expect(200)
+      .expect("content-type", /html/)
+      .expect((res) => {
+        expect(res.text).toContain("Download a video");
+      });
   });
 });

@@ -1,17 +1,20 @@
 import { Injectable } from "@nestjs/common";
-import type { ChannelTab, CollectionInfo } from "@vidyoza/shared";
+import type { ChannelTab, CollectionInfo } from "@downloader/shared";
 import {
   CHANNEL_TABS,
   PLATFORM_META,
   PLATFORMS,
   detectChannelTab,
-  detectPlatform,
   detectUrlKind,
   isValidHttpUrl,
   normalizeCollectionUrl,
-} from "@vidyoza/shared";
+  resolvePlatform,
+} from "@downloader/shared";
 import { ApiException, ErrorCode } from "../common/errors";
+import { SsrfError, assertPublicHttpUrl } from "../common/http/safe-fetch";
+import { AppConfigService } from "../config/app-config.service";
 import { ExtractionService } from "../engine/extraction.service";
+import { EngineError } from "../engine/ytdlp/errors";
 import { YtdlpService } from "../engine/ytdlp.service";
 
 /** One extraction already covers this many rows in ~2s; more just adds latency. */
@@ -22,16 +25,27 @@ export class MediaService {
   constructor(
     private readonly extraction: ExtractionService,
     private readonly ytdlp: YtdlpService,
+    private readonly config: AppConfigService,
   ) {}
 
   private assertSupported(url: string): void {
     if (!url || !isValidHttpUrl(url)) {
       throw new ApiException(ErrorCode.INVALID_URL, "Please provide a valid http(s) URL.");
     }
-    if (!detectPlatform(url)) {
+    if (this.config.allowGenericUrls) {
+      try {
+        assertPublicHttpUrl(url);
+      } catch (error) {
+        throw new ApiException(
+          ErrorCode.INVALID_URL,
+          error instanceof SsrfError ? error.message : "This URL is not allowed.",
+        );
+      }
+    }
+    if (!resolvePlatform(url, this.config.allowGenericUrls)) {
       throw new ApiException(
         ErrorCode.UNSUPPORTED_PLATFORM,
-        "This URL does not belong to a supported platform (YouTube, Instagram, TikTok, X/Twitter, Facebook).",
+        "This URL is not a supported platform. Set ALLOW_GENERIC_URLS=true to download any public site yt-dlp supports.",
       );
     }
   }
@@ -41,6 +55,7 @@ export class MediaService {
     try {
       return await this.extraction.getMediaInfo(url.trim());
     } catch (error) {
+      if (error instanceof EngineError || error instanceof ApiException) throw error;
       throw new ApiException(
         ErrorCode.EXTRACTION_FAILED,
         error instanceof Error ? error.message : "Failed to fetch media info.",
@@ -98,6 +113,7 @@ export class MediaService {
         limit,
       });
     } catch (error) {
+      if (error instanceof EngineError || error instanceof ApiException) throw error;
       throw new ApiException(
         ErrorCode.EXTRACTION_FAILED,
         error instanceof Error ? error.message : "Failed to list that link.",

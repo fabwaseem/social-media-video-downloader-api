@@ -21,7 +21,7 @@ import {
   ApiTags,
 } from "@nestjs/swagger";
 import { Throttle } from "@nestjs/throttler";
-import type { JobEvent } from "@vidyoza/shared";
+import type { JobEvent } from "@downloader/shared";
 import { Observable, endWith, ignoreElements, interval, map, merge, takeUntil } from "rxjs";
 import type { AuthedRequest } from "../auth/api-key.guard";
 import { AuthSessionService } from "../auth/auth-session.service";

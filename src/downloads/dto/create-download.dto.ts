@@ -4,7 +4,7 @@ import {
   AUDIO_QUALITIES,
   VIDEO_FORMATS,
   VIDEO_QUALITIES,
-} from "@vidyoza/shared";
+} from "@downloader/shared";
 import {
   IsBoolean,
   IsIn,
@@ -45,10 +45,41 @@ export class CreateDownloadDto {
   @IsBoolean()
   embedThumbnail?: boolean;
 
+  @ApiPropertyOptional({ description: "Embed metadata and cover art" })
+  @IsOptional()
+  @IsBoolean()
+  embedMetadata?: boolean;
+
+  @ApiPropertyOptional({ description: "Embed chapter markers" })
+  @IsOptional()
+  @IsBoolean()
+  embedChapters?: boolean;
+
   @ApiPropertyOptional({ description: "Embed subtitles into video file" })
   @IsOptional()
   @IsBoolean()
   embedSubtitles?: boolean;
+
+  @ApiPropertyOptional({ description: "Write subtitle files beside the video" })
+  @IsOptional()
+  @IsBoolean()
+  writeSubtitles?: boolean;
+
+  @ApiPropertyOptional({ description: "Write the thumbnail image beside the download" })
+  @IsOptional()
+  @IsBoolean()
+  writeThumbnail?: boolean;
+
+  @ApiPropertyOptional({ enum: ["h264"], description: "Re-encode video to H.264" })
+  @IsOptional()
+  @IsIn(["h264"])
+  videoCodec?: "h264";
+
+  @ApiPropertyOptional({ description: "HTTPS callback invoked when the job finishes" })
+  @IsOptional()
+  @IsUrl({ require_protocol: true, protocols: ["http", "https"] })
+  @MaxLength(2048)
+  callbackUrl?: string;
 
   @ApiPropertyOptional({ description: "Subtitle language code", example: "en" })
   @IsOptional()

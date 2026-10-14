@@ -1,4 +1,4 @@
-import type { Platform } from "@vidyoza/shared";
+import type { Platform } from "@downloader/shared";
 
 /**
  * Media resolved by an extractor other than yt-dlp.

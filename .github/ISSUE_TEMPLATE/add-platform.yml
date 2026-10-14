@@ -1,0 +1,19 @@
+name: Add platform
+description: Request a new site plugin
+labels: ["platform"]
+body:
+  - type: input
+    attributes:
+      label: Site
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Public URL examples
+      description: Two or three URL shapes. No private links.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Notes
+      description: yt-dlp extractor name, if you know it.

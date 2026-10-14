@@ -20,7 +20,7 @@ export type VideoQuality = (typeof VIDEO_QUALITIES)[number];
 export const AUDIO_QUALITIES = ["best", "high", "medium", "low"] as const;
 export type AudioQuality = (typeof AUDIO_QUALITIES)[number];
 
-export const VIDEO_FORMATS = ["mp4", "mkv", "webm"] as const;
+export const VIDEO_FORMATS = ["mp4", "mkv", "webm", "gif"] as const;
 export type VideoFormat = (typeof VIDEO_FORMATS)[number];
 
 export const AUDIO_FORMATS = ["mp3", "m4a", "opus", "wav", "flac"] as const;

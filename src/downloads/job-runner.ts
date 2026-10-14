@@ -1,6 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
-import type { JobStatus } from "@vidyoza/shared";
-import { isTerminalStatus } from "@vidyoza/shared";
+import type { JobStatus } from "@downloader/shared";
+import { isTerminalStatus } from "@downloader/shared";
 import * as fs from "fs/promises";
 import { join } from "path";
 import { AppConfigService } from "../config/app-config.service";
@@ -21,6 +21,7 @@ import { JobQueue } from "./job-queue";
 import { recoveryPlan } from "./job-recovery";
 import { ACTIVE_JOB_STATUSES } from "./job-recovery";
 import { toDownloadJob } from "./present";
+import { postWebhook } from "./webhook";
 
 @Injectable()
 export class JobRunner implements OnModuleInit {
@@ -75,10 +76,16 @@ export class JobRunner implements OnModuleInit {
       quality: (record.quality ?? undefined) as CreateDownloadDto["quality"],
       format: (record.format ?? undefined) as CreateDownloadDto["format"],
       embedThumbnail: options.embedThumbnail,
+      embedMetadata: options.embedMetadata,
+      embedChapters: options.embedChapters,
       embedSubtitles: options.embedSubtitles,
+      writeSubtitles: options.writeSubtitles,
+      writeThumbnail: options.writeThumbnail,
+      videoCodec: options.videoCodec,
       subtitleLang: options.subtitleLang,
       clipStart: options.clipStart,
       clipEnd: options.clipEnd,
+      callbackUrl: options.callbackUrl,
     };
     const maxDuration = options.maxDurationSeconds ?? this.config.maxDurationSeconds;
 
@@ -126,7 +133,7 @@ export class JobRunner implements OnModuleInit {
       try {
         await this.extraction.runDownload({
           url: dto.url,
-          request: { ...dto, embedMetadata: options.embedMetadata, embedChapters: options.embedChapters },
+          request: { ...dto },
           outputPath: outputTemplate,
           kind: dto.kind,
           format,
@@ -189,6 +196,7 @@ export class JobRunner implements OnModuleInit {
       });
       this.metrics.recordJob("completed", record.platform);
       this.logger.log(`Job ${jobId} completed: ${finalFilename}`);
+      await this.notify(options.callbackUrl, toDownloadJob(updated, this.config.fileLinkSecret, this.config.signedUrlTtlSeconds));
     } catch (error) {
       if (error instanceof CancelledError || this.queue.wasCancelled(jobId)) {
         this.logger.log(`Job ${jobId} cancelled`);
@@ -199,6 +207,10 @@ export class JobRunner implements OnModuleInit {
       const classified = error instanceof EngineError ? error : classifyYtdlpFailure(error);
       this.logger.warn(`Job ${jobId} failed: ${classified.message}`);
       await fail(classified.message, classified.code);
+      const failed = await this.prisma.download.findUnique({ where: { id: jobId } });
+      if (failed) {
+        await this.notify(options.callbackUrl, toDownloadJob(failed, this.config.fileLinkSecret, this.config.signedUrlTtlSeconds));
+      }
     }
   }
 
@@ -275,6 +287,15 @@ export class JobRunner implements OnModuleInit {
       if (remaining === 0) return;
     }
     this.logger.warn(`Could not remove all partial files for ${base}`);
+  }
+
+  private async notify(url: string | undefined, job: ReturnType<typeof toDownloadJob>): Promise<void> {
+    if (!url) return;
+    try {
+      await postWebhook(url, { event: job.status === "COMPLETED" ? "download.completed" : "download.failed", job }, this.config.webhookSecret);
+    } catch (error) {
+      this.logger.warn(`Webhook for ${job.id} failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
 
   private update(id: string, data: Record<string, unknown>): Promise<Download> {
