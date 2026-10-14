@@ -1,0 +1,14 @@
+name: Bug
+description: Something in the API is broken
+labels: ["bug"]
+body:
+  - type: textarea
+    attributes:
+      label: What happened
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: How to reproduce
+    validations:
+      required: true

@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
-import type { ChannelTab, CollectionInfo, CreateDownloadRequest, MediaInfo, PlaylistInfo } from "@vidyoza/shared";
-import { detectPlatform } from "@vidyoza/shared";
+import type { ChannelTab, CollectionInfo, CreateDownloadRequest, MediaInfo, PlaylistInfo } from "@downloader/shared";
+import { detectPlatform } from "@downloader/shared";
 import { ChildProcess, execFile, spawn } from "child_process";
 import * as fsSync from "fs";
 import { promisify } from "util";
@@ -146,7 +146,7 @@ export class YtdlpService {
   async extractInfo(url: string): Promise<MediaInfo> {
     const platform = detectPlatform(url);
     const stdout = await this.run(["--dump-json", "--no-download"], { url });
-    return normalizeInfo(parseFirstJson<RawInfo>(stdout), url, platform ?? "youtube");
+    return normalizeInfo(parseFirstJson<RawInfo>(stdout), url, platform ?? "generic");
   }
 
   async getCollectionInfo(input: {

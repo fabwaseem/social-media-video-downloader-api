@@ -76,7 +76,17 @@ export class AppConfigService {
   }
 
   get swaggerEnabled(): boolean {
-    return !this.isProduction || this.config.get("SWAGGER_ENABLED", { infer: true });
+    return this.config.get("SWAGGER_ENABLED", { infer: true });
+  }
+
+  get allowGenericUrls(): boolean {
+    return this.config.get("ALLOW_GENERIC_URLS", { infer: true });
+  }
+
+  get webhookSecret(): string {
+    const explicit = this.config.get("WEBHOOK_SECRET", { infer: true });
+    if (explicit) return explicit;
+    return this.fileLinkSecret;
   }
 
   get throttleTtlSeconds(): number {

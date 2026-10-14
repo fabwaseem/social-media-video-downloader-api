@@ -1,6 +1,7 @@
 import { HttpStatus, Injectable, Logger } from "@nestjs/common";
-import type { DownloadJob, JobStatus } from "@vidyoza/shared";
-import { detectPlatform, isTerminalStatus } from "@vidyoza/shared";
+import type { DownloadJob, JobStatus } from "@downloader/shared";
+import { isTerminalStatus, resolvePlatform } from "@downloader/shared";
+import { SsrfError, assertPublicHttpUrl } from "../common/http/safe-fetch";
 import { Prisma } from "../generated/prisma/client";
 import { AppConfigService } from "../config/app-config.service";
 import { ApiException, ErrorCode } from "../common/errors";
@@ -64,14 +65,27 @@ export class DownloadsService {
     });
   }
 
-  async create(dto: CreateDownloadDto, principal: Principal = {}): Promise<DownloadJob> {
-    const platform = detectPlatform(dto.url);
+  private platformFor(url: string): string {
+    if (this.config.allowGenericUrls) {
+      try {
+        assertPublicHttpUrl(url);
+      } catch (error) {
+        const message = error instanceof SsrfError ? error.message : "This URL is not allowed.";
+        throw new ApiException(ErrorCode.INVALID_URL, message);
+      }
+    }
+    const platform = resolvePlatform(url, this.config.allowGenericUrls);
     if (!platform) {
       throw new ApiException(
         ErrorCode.UNSUPPORTED_PLATFORM,
-        "This URL does not belong to a supported platform (YouTube, Instagram, TikTok, X/Twitter, Facebook).",
+        "This URL is not a supported platform. Set ALLOW_GENERIC_URLS=true to download any public site yt-dlp supports.",
       );
     }
+    return platform;
+  }
+
+  async create(dto: CreateDownloadDto, principal: Principal = {}): Promise<DownloadJob> {
+    const platform = this.platformFor(dto.url);
 
     if ((await this.queue.pendingCount()) >= MAX_PENDING_JOBS) {
       throw new ApiException(
@@ -114,9 +128,12 @@ export class DownloadsService {
 
   async createBatch(dto: CreateBatchDto, principal: Principal = {}): Promise<DownloadJob[]> {
     const urls = [...new Set(dto.urls.map((url) => url.trim()).filter(Boolean))];
-    const unsupported = urls.find((url) => !detectPlatform(url));
+    const unsupported = urls.find((url) => !resolvePlatform(url, this.config.allowGenericUrls));
     if (unsupported) {
-      throw new ApiException(ErrorCode.UNSUPPORTED_PLATFORM, `Unsupported URL in batch: ${unsupported}`);
+      throw new ApiException(
+        ErrorCode.UNSUPPORTED_PLATFORM,
+        `Unsupported URL in batch: ${unsupported}`,
+      );
     }
 
     const headroom = MAX_PENDING_JOBS - (await this.queue.pendingCount());
@@ -132,8 +149,7 @@ export class DownloadsService {
 
     const jobs: DownloadJob[] = [];
     for (const url of urls) {
-      const platform = detectPlatform(url);
-      if (!platform) continue;
+      const platform = this.platformFor(url);
       const record = await this.prisma.download.create({
         data: {
           url,

@@ -1,0 +1,21 @@
+name: Nightly platform smoke
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install pinned yt-dlp
+        run: |
+          curl -fsSL -o /usr/local/bin/yt-dlp https://github.com/yt-dlp/yt-dlp/releases/download/2026.08.19/yt-dlp_linux
+          chmod +x /usr/local/bin/yt-dlp
+      - name: Probe one public URL per platform
+        run: node scripts/platform-smoke.mjs

@@ -6,6 +6,7 @@ import {
   extractVideoUrl,
   isValidHttpUrl,
   normalizeCollectionUrl,
+  resolvePlatform,
 } from "./platforms";
 
 describe("detectPlatform", () => {
@@ -23,6 +24,17 @@ describe("detectPlatform", () => {
     ["https://t.co/abcDEF12", "twitter"],
     ["https://www.facebook.com/watch?v=1234567890", "facebook"],
     ["https://fb.watch/abc123/", "facebook"],
+    ["https://www.reddit.com/r/videos/comments/abc123/title/", "reddit"],
+    ["https://v.redd.it/abc123", "reddit"],
+    ["https://vimeo.com/76979871", "vimeo"],
+    ["https://bsky.app/profile/user.bsky.social/post/abc123", "bluesky"],
+    ["https://www.threads.net/@user/post/abc123", "threads"],
+    ["https://www.pinterest.com/pin/1234567890/", "pinterest"],
+    ["https://pin.it/abc123", "pinterest"],
+    ["https://clips.twitch.tv/ExampleClipName", "twitch"],
+    ["https://www.twitch.tv/channel/clip/ExampleClipName", "twitch"],
+    ["https://soundcloud.com/artist/track", "soundcloud"],
+    ["https://www.snapchat.com/spotlight/abc123", "snapchat"],
     ["https://example.com/video", null],
     ["", null],
     ["not a url", null],
@@ -30,6 +42,14 @@ describe("detectPlatform", () => {
 
   it.each(cases)("%s -> %s", (url, platform) => {
     expect(detectPlatform(url)).toBe(platform);
+  });
+});
+
+describe("resolvePlatform", () => {
+  it("returns generic only when that mode is on", () => {
+    expect(resolvePlatform("https://example.com/video", false)).toBeNull();
+    expect(resolvePlatform("https://example.com/video", true)).toBe("generic");
+    expect(resolvePlatform("https://vimeo.com/76979871", false)).toBe("vimeo");
   });
 });
 

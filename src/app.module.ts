@@ -17,6 +17,7 @@ import { FilesModule } from "./files/files.module";
 import { HealthModule } from "./health/health.module";
 import { MediaModule } from "./media/media.module";
 import { MetricsModule } from "./metrics/metrics.module";
+import { PlaygroundModule } from "./playground/playground.module";
 import { PrismaModule } from "./prisma/prisma.module";
 import { RedisModule } from "./redis/redis.module";
 import { RedisThrottlerStorage } from "./redis/throttler-storage";
@@ -44,6 +45,7 @@ import { RedisThrottlerStorage } from "./redis/throttler-storage";
         storage,
       }),
     }),
+    PlaygroundModule,
     HealthModule,
     MediaModule,
     DownloadsModule,

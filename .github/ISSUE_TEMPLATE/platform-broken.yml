@@ -1,0 +1,26 @@
+name: Platform broken
+description: A supported site no longer downloads
+labels: ["platform"]
+body:
+  - type: input
+    attributes:
+      label: Platform
+      placeholder: vimeo
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: URL shape
+      description: Replace ids. Do not paste private or login-only links.
+      placeholder: https://vimeo.com/123
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: Error code
+      placeholder: BLOCKED
+  - type: textarea
+    attributes:
+      label: What the API returned
+    validations:
+      required: true

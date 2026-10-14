@@ -14,6 +14,6 @@ module.exports = {
     ],
   },
   moduleNameMapper: {
-    "^@vidyoza/shared$": "<rootDir>/packages/shared/src/index.ts",
+    "^@downloader/shared$": "<rootDir>/packages/shared/src/index.ts",
   },
 };

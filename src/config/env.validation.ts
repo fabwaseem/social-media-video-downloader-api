@@ -48,8 +48,12 @@ export const envSchema = z.object({
   SMTP_USER: z.string().optional().default(""),
   SMTP_PASS: z.string().optional().default(""),
   SMTP_FROM: z.string().optional().default("Vidyoza <no-reply@vidyoza.local>"),
-  /** Expose /docs (Swagger). Always on outside production. */
-  SWAGGER_ENABLED: booleanish("false"),
+  /** Expose /docs (Swagger). On unless set to false. */
+  SWAGGER_ENABLED: booleanish("true"),
+  /** Accept any public http(s) URL yt-dlp supports, not only the built-in platforms. */
+  ALLOW_GENERIC_URLS: booleanish("false"),
+  /** HMAC secret for job webhooks. Empty uses FILE_LINK_SECRET, then BETTER_AUTH_SECRET. */
+  WEBHOOK_SECRET: z.string().optional().default(""),
   THROTTLE_TTL_SECONDS: z.coerce.number().int().positive().default(60),
   THROTTLE_LIMIT: z.coerce.number().int().positive().default(60),
   MAX_CONCURRENT_JOBS: z.coerce.number().int().min(1).max(10).default(3),

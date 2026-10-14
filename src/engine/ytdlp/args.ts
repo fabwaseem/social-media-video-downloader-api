@@ -4,8 +4,8 @@ import type {
   CreateDownloadRequest,
   VideoFormat,
   VideoQuality,
-} from "@vidyoza/shared";
-import { AUDIO_FORMATS, VIDEO_FORMATS } from "@vidyoza/shared";
+} from "@downloader/shared";
+import { AUDIO_FORMATS, VIDEO_FORMATS } from "@downloader/shared";
 import { PROGRESS_TEMPLATE } from "../progress";
 import type { Attempt } from "../resilience";
 
@@ -130,15 +130,19 @@ export function buildDownloadArgs(
   } else {
     const format = (request.format as VideoFormat) ?? "mp4";
     const quality = (request.quality as VideoQuality) ?? "highest";
-    args.push(
-      "-f",
-      videoFormatSelector(quality),
-      "--merge-output-format",
-      VIDEO_FORMATS.includes(format) ? format : "mp4",
-    );
-    if (request.embedSubtitles) {
-      args.push("--embed-subs", "--sub-langs", request.subtitleLang || "en.*,en");
+    const container = VIDEO_FORMATS.includes(format) ? format : "mp4";
+    args.push("-f", videoFormatSelector(quality), "--merge-output-format", container === "gif" ? "mp4" : container);
+    if (container === "gif") args.push("--recode-video", "gif");
+    if (request.videoCodec === "h264") {
+      args.push("--recode-video", "mp4", "--postprocessor-args", "ffmpeg:-c:v libx264 -c:a aac");
     }
+    if (request.embedSubtitles || request.writeSubtitles) {
+      args.push("--write-subs", "--sub-langs", request.subtitleLang || "en.*,en");
+      if (request.embedSubtitles) args.push("--embed-subs");
+    }
+    if (request.writeThumbnail || request.embedThumbnail) args.push("--write-thumbnail");
+    if (request.embedMetadata) args.push("--embed-metadata");
+    if (request.embedChapters) args.push("--embed-chapters");
   }
 
   if (request.clipStart != null || request.clipEnd != null) {

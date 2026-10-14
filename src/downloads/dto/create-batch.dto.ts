@@ -4,7 +4,7 @@ import {
   AUDIO_QUALITIES,
   VIDEO_FORMATS,
   VIDEO_QUALITIES,
-} from "@vidyoza/shared";
+} from "@downloader/shared";
 import {
   ArrayMaxSize,
   ArrayNotEmpty,

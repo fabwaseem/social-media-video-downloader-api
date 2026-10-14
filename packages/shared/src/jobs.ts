@@ -41,8 +41,16 @@ export interface CreateDownloadRequest {
   embedChapters?: boolean;
   /** Embed subtitles when available (kind=video). */
   embedSubtitles?: boolean;
+  /** Also write subtitle files next to the video. */
+  writeSubtitles?: boolean;
+  /** Write the thumbnail image next to the download. */
+  writeThumbnail?: boolean;
+  /** Re-encode video to H.264 inside an mp4. */
+  videoCodec?: "h264";
   /** Subtitle language code to embed, e.g. "en". */
   subtitleLang?: string;
+  /** HTTPS endpoint called when the job finishes or fails. */
+  callbackUrl?: string;
   /** Download a clip: start time in seconds. */
   clipStart?: number;
   /** Download a clip: end time in seconds. */

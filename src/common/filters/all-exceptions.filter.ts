@@ -6,7 +6,7 @@ import {
   HttpStatus,
   Logger,
 } from "@nestjs/common";
-import type { ApiError } from "@vidyoza/shared";
+import type { ApiError } from "@downloader/shared";
 import type { Request, Response } from "express";
 import { ApiException } from "../errors";
 import { EngineError } from "../../engine/ytdlp/errors";

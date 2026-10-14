@@ -117,6 +117,7 @@ export function isTrackedShortLink(raw: string): boolean {
 export interface SafeFetchOptions {
   method?: string;
   headers?: Record<string, string>;
+  body?: string;
   timeoutMs?: number;
   maxRedirects?: number;
   maxBytes?: number;
@@ -233,6 +234,7 @@ function defaultTransport(url: URL, options: SafeFetchOptions): Promise<HopRespo
     };
     req.on("error", (error) => reject(error));
     req.on("timeout", () => fail(new Error("Request timed out")));
+    if (options.body) req.write(options.body);
     if (options.signal) {
       const onAbort = () => fail(new Error("Request aborted"));
       if (options.signal.aborted) {

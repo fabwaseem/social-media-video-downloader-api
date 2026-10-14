@@ -1,4 +1,4 @@
-import type { DownloadJob, JobStatus } from "@vidyoza/shared";
+import type { DownloadJob, JobStatus } from "@downloader/shared";
 import type { Download } from "../generated/prisma/client";
 import { fileLinkPath } from "../files/download-link";
 
