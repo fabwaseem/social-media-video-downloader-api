@@ -20,9 +20,10 @@ pnpm exec prisma migrate deploy
 pnpm dev
 ```
 
-Or with Docker (Postgres and Redis included):
+Or with Docker (Postgres and Redis included). Copy `.env.example` to `.env` and set `BETTER_AUTH_SECRET` first (`openssl rand -hex 32`). Compose refuses to start without it.
 
 ```bash
+cp .env.example .env
 POSTGRES_PASSWORD=postgres docker compose up --build
 ```
 
