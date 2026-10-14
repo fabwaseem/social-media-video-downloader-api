@@ -36,7 +36,7 @@ export const envSchema = z.object({
   ADMIN_TOKEN: z.string().optional().default(""),
   /** Signing secret for Better Auth sessions/tokens. Required in production. */
   BETTER_AUTH_SECRET: z.string().optional().default(""),
-  /** Public origin of the frontend, e.g. https://vidyoza.com (OAuth callbacks build on it). */
+  /** Public origin of the frontend, e.g. https://example.com (OAuth callbacks build on it). */
   BETTER_AUTH_URL: z.string().optional().default("http://localhost:3000"),
   GOOGLE_CLIENT_ID: z.string().optional().default(""),
   GOOGLE_CLIENT_SECRET: z.string().optional().default(""),
@@ -47,7 +47,7 @@ export const envSchema = z.object({
   SMTP_PORT: z.coerce.number().int().positive().default(587),
   SMTP_USER: z.string().optional().default(""),
   SMTP_PASS: z.string().optional().default(""),
-  SMTP_FROM: z.string().optional().default("Vidyoza <no-reply@vidyoza.local>"),
+  SMTP_FROM: z.string().optional().default("Snagbox <no-reply@snagbox.local>"),
   /** Expose /docs (Swagger). On unless set to false. */
   SWAGGER_ENABLED: booleanish("true"),
   /** Accept any public http(s) URL yt-dlp supports, not only the built-in platforms. */
@@ -73,7 +73,7 @@ export const envSchema = z.object({
   R2_ENDPOINT: z.string().optional().default(""),
   R2_ACCESS_KEY_ID: z.string().optional().default(""),
   R2_SECRET_ACCESS_KEY: z.string().optional().default(""),
-  R2_BUCKET: z.string().optional().default("vidyoza-downloads"),
+  R2_BUCKET: z.string().optional().default("snagbox-downloads"),
   /**
    * Lifetime of a download link. Long enough to survive a paused download and
    * a resume attempt, short enough that a leaked URL stops working.

@@ -1,5 +1,5 @@
 name: Bug
-description: Something in the API is broken
+description: Something in Snagbox is broken
 labels: ["bug"]
 body:
   - type: textarea

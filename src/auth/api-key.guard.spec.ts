@@ -91,7 +91,7 @@ describe("ApiKeyGuard", () => {
   it("still rejects an invalid key when auth is disabled", async () => {
     const guard = guardFor({ authDisabled: true }, { validate: jest.fn().mockResolvedValue(null) });
     await expect(
-      guard.canActivate(httpContext(Routes.prototype.locked, { "x-api-key": "vz_bad" })),
+      guard.canActivate(httpContext(Routes.prototype.locked, { "x-api-key": "sb_bad" })),
     ).rejects.toBeInstanceOf(HttpException);
   });
 
@@ -99,14 +99,14 @@ describe("ApiKeyGuard", () => {
     const validate = jest.fn().mockResolvedValue(key);
     const consumeQuota = jest.fn().mockReturnValue(1);
     const guard = guardFor({ authDisabled: false, isProduction: true }, { validate, consumeQuota });
-    const context = httpContext(Routes.prototype.locked, { authorization: "Bearer vz_good" });
+    const context = httpContext(Routes.prototype.locked, { authorization: "Bearer sb_good" });
     await expect(guard.canActivate(context)).resolves.toBe(true);
-    expect(validate).toHaveBeenCalledWith("vz_good");
+    expect(validate).toHaveBeenCalledWith("sb_good");
     expect(context.switchToHttp().getRequest<{ apiKey?: ValidatedKey }>().apiKey).toEqual(key);
 
     consumeQuota.mockReturnValue(-1);
     await expect(
-      guard.canActivate(httpContext(Routes.prototype.locked, { "x-api-key": "vz_good" })),
+      guard.canActivate(httpContext(Routes.prototype.locked, { "x-api-key": "sb_good" })),
     ).rejects.toBeInstanceOf(HttpException);
   });
 

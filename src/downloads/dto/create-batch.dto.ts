@@ -4,7 +4,7 @@ import {
   AUDIO_QUALITIES,
   VIDEO_FORMATS,
   VIDEO_QUALITIES,
-} from "@downloader/shared";
+} from "@snagbox/shared";
 import {
   ArrayMaxSize,
   ArrayNotEmpty,

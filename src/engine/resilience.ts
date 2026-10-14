@@ -1,4 +1,4 @@
-import type { Platform } from "@downloader/shared";
+import type { Platform } from "@snagbox/shared";
 
 /**
  * Recovery strategy for flaky extractions.

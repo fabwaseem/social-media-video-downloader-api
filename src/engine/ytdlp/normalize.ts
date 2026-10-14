@@ -5,8 +5,8 @@ import type {
   Platform,
   SubtitleTrack,
   VideoQuality,
-} from "@downloader/shared";
-import { AUDIO_QUALITIES, VIDEO_FORMATS, AUDIO_FORMATS } from "@downloader/shared";
+} from "@snagbox/shared";
+import { AUDIO_QUALITIES, VIDEO_FORMATS, AUDIO_FORMATS } from "@snagbox/shared";
 
 /** Raw subset of yt-dlp's --dump-json output we rely on. */
 export interface RawInfo {

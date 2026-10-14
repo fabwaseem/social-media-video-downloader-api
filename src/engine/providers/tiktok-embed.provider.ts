@@ -1,5 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
-import type { Platform } from "@downloader/shared";
+import type { Platform } from "@snagbox/shared";
 import { resolveSourceUrl, safeFetch, SsrfError } from "../../common/http/safe-fetch";
 import { DESKTOP_UA } from "../resilience";
 import type { MediaProvider, ProviderMedia } from "./types";

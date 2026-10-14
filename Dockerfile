@@ -12,7 +12,7 @@ COPY packages/shared/package.json packages/shared/package.json
 RUN pnpm install --frozen-lockfile
 COPY . .
 ENV DATABASE_URL=postgresql://postgres:postgres@localhost:5432/downloader
-RUN pnpm --filter @downloader/shared build \
+RUN pnpm --filter @snagbox/shared build \
   && pnpm exec prisma generate \
   && pnpm exec nest build
 
@@ -48,6 +48,14 @@ COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/packages ./packages
 COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/assets ./assets
+# x-release-please-version
+LABEL org.opencontainers.image.title="Snagbox" \
+      org.opencontainers.image.description="Paste a link, snag the media: a self-hostable downloader API." \
+      org.opencontainers.image.url="https://github.com/fabwaseem/snagbox" \
+      org.opencontainers.image.source="https://github.com/fabwaseem/snagbox" \
+      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.version="2.0.0"
 ENV NODE_ENV=production \
   PORT=3001 \
   YTDLP_PATH=/usr/local/bin/yt-dlp \

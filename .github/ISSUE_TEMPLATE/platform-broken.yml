@@ -1,5 +1,5 @@
 name: Platform broken
-description: A supported site no longer downloads
+description: A site Snagbox supports no longer downloads
 labels: ["platform"]
 body:
   - type: input

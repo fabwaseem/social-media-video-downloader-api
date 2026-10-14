@@ -4,8 +4,8 @@ import type {
   CreateDownloadRequest,
   VideoFormat,
   VideoQuality,
-} from "@downloader/shared";
-import { AUDIO_FORMATS, VIDEO_FORMATS } from "@downloader/shared";
+} from "@snagbox/shared";
+import { AUDIO_FORMATS, VIDEO_FORMATS } from "@snagbox/shared";
 import { PROGRESS_TEMPLATE } from "../progress";
 import type { Attempt } from "../resilience";
 

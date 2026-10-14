@@ -51,10 +51,10 @@ export async function createAuth(prisma: PrismaService, config: AppConfigService
   }
 
   return betterAuth({
-    appName: "Vidyoza",
+    appName: "Snagbox",
     baseURL: config.betterAuthUrl,
     basePath: "/api/auth",
-    secret: secret || "vidyoza-dev-secret-do-not-use-in-production",
+    secret: secret || "snagbox-dev-secret-do-not-use-in-production",
     database: prismaAdapter(prisma, { provider: "postgresql" }),
     trustedOrigins: [config.betterAuthUrl, ...config.allowedOrigins].filter(Boolean),
 
@@ -75,10 +75,10 @@ export async function createAuth(prisma: PrismaService, config: AppConfigService
         async sendVerificationOTP({ email, otp, type }) {
           const subject =
             type === "sign-in"
-              ? "Your Vidyoza sign-in code"
+              ? "Your Snagbox sign-in code"
               : type === "email-verification"
-                ? "Verify your Vidyoza email"
-                : "Reset your Vidyoza password";
+                ? "Verify your Snagbox email"
+                : "Reset your Snagbox password";
           await sendMail(
             email,
             subject,
@@ -110,7 +110,7 @@ export async function createAuth(prisma: PrismaService, config: AppConfigService
     },
 
     advanced: {
-      cookiePrefix: "vidyoza",
+      cookiePrefix: "snagbox",
     },
   });
 }

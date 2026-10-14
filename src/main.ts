@@ -3,6 +3,7 @@ import { NestFactory } from "@nestjs/core";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { json, type NextFunction, type Request, type Response } from "express";
+import { join } from "path";
 import helmet from "helmet";
 import { AppModule } from "./app.module";
 import { createLogger, PinoNestLogger } from "./logging/pino-logger";
@@ -18,6 +19,7 @@ async function bootstrap(): Promise<void> {
   });
   const config = app.get(AppConfigService);
   app.useLogger(new PinoNestLogger(createLogger(config.logLevel)));
+  app.useStaticAssets(join(process.cwd(), "assets"), { prefix: "/assets" });
 
   // All real traffic arrives via the Next.js proxy (and often a platform LB in
   // front of that). Without trust proxy, req.ip is the proxy's address and
@@ -99,9 +101,9 @@ async function bootstrap(): Promise<void> {
   });
 
   const swaggerConfig = new DocumentBuilder()
-    .setTitle("Downloader API")
+    .setTitle("Snagbox API")
     .setDescription(
-      "Download jobs for public social media URLs, with live progress, signed file links, and optional webhooks.",
+      "Paste a link, snag the media. Self-hostable downloader API for public URLs, with live progress, signed file links, and optional webhooks.",
     )
     .setVersion("2.0.0")
     .addApiKey({ type: "apiKey", in: "header", name: "X-API-Key" }, "api-key")
@@ -119,7 +121,7 @@ async function bootstrap(): Promise<void> {
 
   await app.listen(config.port);
   Logger.log(
-    `Vidyoza API v2 listening on http://localhost:${config.port}` +
+    `Snagbox API listening on http://localhost:${config.port}` +
       (config.swaggerEnabled ? " (docs at /docs)" : ""),
     "Bootstrap",
   );

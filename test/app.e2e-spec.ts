@@ -50,6 +50,7 @@ describe("Health (e2e)", () => {
       .get("/v2/health")
       .expect(200)
       .expect((res) => {
+        expect(res.body.service).toBe("snagbox");
         expect(res.body.status).toBe("ok");
         expect(res.body.database).toBe(true);
         expect(res.body.engine.ytdlpVersion).toBe("2026.08.19");
@@ -62,7 +63,10 @@ describe("Health (e2e)", () => {
       .expect(200)
       .expect("content-type", /html/)
       .expect((res) => {
-        expect(res.text).toContain("Download a video");
+        expect(res.text).toContain("Snagbox");
+        expect(res.text).toContain("/assets/brand/logo-light.svg");
+        expect(res.text).toContain("/assets/brand/logo-dark.svg");
+        expect(res.text).toContain("/assets/brand/favicon-32.png");
       });
   });
 });
