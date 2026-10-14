@@ -240,7 +240,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md), and [CODE_OF
 pnpm lint && pnpm typecheck && pnpm test && pnpm build
 ```
 
-Releases are cut by release-please. A `vX.Y.Z` tag publishes `ghcr.io/fabwaseem/snagbox:X.Y.Z` and `:latest`.
+Releases are tagged manually (`git tag vX.Y.Z` on main), which triggers the GHCR publish workflow. A `vX.Y.Z` tag publishes `ghcr.io/fabwaseem/snagbox:X.Y.Z` and `:latest`.
 
 ## Legal
 
